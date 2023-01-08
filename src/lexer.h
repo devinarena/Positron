@@ -6,8 +6,8 @@
  * @since 1/6/2023
  **/
 
-#ifndef LEXER_H
-#define LEXER_H
+#ifndef POSITRON_LEXER_H
+#define POSITRON_LEXER_H
 
 #include "token.h"
 

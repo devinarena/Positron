@@ -6,11 +6,10 @@
 * @since 1/7/2023
 **/
 
-#ifndef INTERPRETER_H
-#define INTERPRETER_H
+#ifndef POSITRON_INTERPRETER_H
+#define POSITRON_INTERPRETER_H
 
-#define STACK_SIZE 256
-
+#include "positron.h"
 #include "dyn_list.h"
 #include "block.h"
 

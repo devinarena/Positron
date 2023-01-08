@@ -6,8 +6,8 @@
  * @since Represents a value in the language, such as a number, string, etc.
  **/
 
-#ifndef VALUE_H
-#define VALUE_H
+#ifndef POSITRON_VALUE_H
+#define POSITRON_VALUE_H
 
 #include <stdio.h>
 #include <stdlib.h>

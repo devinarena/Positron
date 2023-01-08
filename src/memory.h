@@ -6,8 +6,8 @@
 * @since 1/6/2023
 **/
 
-#ifndef MEMORY_H
-#define MEMORY_H
+#ifndef POSITRON_MEMORY_H
+#define POSITRON_MEMORY_H
 
 // reads a file into a newly allocated string
 const char* read_file(const char *path);

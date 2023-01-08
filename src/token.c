@@ -41,6 +41,9 @@ void token_print(Token* token) {
     case TOKEN_SLASH:
     case TOKEN_LPAREN:
     case TOKEN_RPAREN:
+    case TOKEN_SEMICOLON:
+    case TOKEN_IDENTIFIER:
+    case TOKEN_PRINT:
       printf("Token(");
       token_type_print(token->type);
       printf(", %s, %d)\n", token->lexeme, token->line);
@@ -64,6 +67,12 @@ void token_type_print(enum TokenType type) {
     case TOKEN_LITERAL_INTEGER:
       printf("TOKEN_LITERAL_INTEGER");
       break;
+    case TOKEN_IDENTIFIER:
+      printf("TOKEN_IDENTIFIER");
+      break;
+    case TOKEN_PRINT:
+      printf("TOKEN_PRINT");
+      break;
     case TOKEN_PLUS:
       printf("TOKEN_PLUS");
       break;
@@ -81,6 +90,9 @@ void token_type_print(enum TokenType type) {
       break;
     case TOKEN_RPAREN:
       printf("TOKEN_RPAREN");
+      break;
+    case TOKEN_SEMICOLON:
+      printf("TOKEN_SEMICOLON");
       break;
     case TOKEN_EOF:
       printf("TOKEN_EOF");

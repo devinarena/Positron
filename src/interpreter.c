@@ -26,8 +26,8 @@ static Value* pop_stack() {
 
 /**
  * @brief Pushes a value onto the stack.
- * 
- * @param value 
+ *
+ * @param value
  */
 static void push_stack(Value* value) {
   if (interpreter.sp == STACK_SIZE) {
@@ -39,19 +39,25 @@ static void push_stack(Value* value) {
 
 /**
  * @brief Interprets the emitted opcodes of a block.
- * 
+ *
  * @param block the block to interpret
  */
 void interpret(Block* block) {
   interpreter_init();
 
   while (interpreter.ip < block->opcodes->size) {
+#ifdef POSITRON_DEBUG
     interpreter_print(block);
+#endif
     switch (*(uint8_t*)block->opcodes->data[interpreter.ip]) {
-      case OP_CONSTANT_INTEGER_32: {
-        uint8_t index = *(uint8_t*)block->opcodes->data[++interpreter.ip];
-        Value* constant = block->constants->data[index];
-        push_stack(constant);
+      case OP_NOP: {
+        interpreter.ip++;
+        break;
+      }
+      case OP_PRINT: {
+        Value* v = pop_stack();
+        value_print(v);
+        printf("\n");
         interpreter.ip++;
         break;
       }
@@ -94,7 +100,10 @@ void interpret(Block* block) {
         interpreter.ip++;
         break;
       }
-      case OP_NOP: {
+      case OP_CONSTANT_INTEGER_32: {
+        uint8_t index = *(uint8_t*)block->opcodes->data[++interpreter.ip];
+        Value* constant = block->constants->data[index];
+        push_stack(constant);
         interpreter.ip++;
         break;
       }
@@ -106,7 +115,9 @@ void interpret(Block* block) {
     }
   }
 
+#ifdef POSITRON_DEBUG
   interpreter_print(block);
+#endif
 }
 
 /**
@@ -134,5 +145,4 @@ void interpreter_print(Block* block) {
 /**
  * @brief Frees the memory allocated by the interpreter.
  */
-void interpreter_free() {
-}
+void interpreter_free() {}

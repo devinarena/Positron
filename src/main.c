@@ -30,9 +30,11 @@ int main(int argc, const char* argv[]) {
   Block* block = block_new(name);
   parser_init(block);
   
-  expression();
+  statement();
 
+#ifdef POSITRON_DEBUG
   block_print(block);
+#endif
   
   interpreter_init();
 

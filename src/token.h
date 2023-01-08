@@ -6,8 +6,8 @@
  * @since Contains token information for the lexer.
  **/
 
-#ifndef TOKEN_H
-#define TOKEN_H
+#ifndef POSITRON_TOKEN_H
+#define POSITRON_TOKEN_H
 
 #define IS_NUM(c) (c - '0' >= 0 && c - '0' <= 9)
 
@@ -16,6 +16,10 @@ enum TokenType {
   TOKEN_LITERAL_INTEGER,
   TOKEN_LITERAL_FLOATING,
   
+  // keywords
+  TOKEN_PRINT,
+  TOKEN_IDENTIFIER,
+
   // single character tokens
   TOKEN_PLUS,
   TOKEN_MINUS,
@@ -23,7 +27,8 @@ enum TokenType {
   TOKEN_SLASH,
   TOKEN_LPAREN,
   TOKEN_RPAREN,
-
+  // Thinking semi-colons will be optional for now
+  TOKEN_SEMICOLON,
   TOKEN_EOF
 };
 

@@ -7,8 +7,8 @@
  * @since 1/6/2023
  **/
 
-#ifndef BLOCK_H
-#define BLOCK_H
+#ifndef POSITRON_BLOCK_H
+#define POSITRON_BLOCK_H
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -17,13 +17,18 @@
 #include "value.h"
 
 enum OpCode {
+    // 1 byte
     OP_NOP,
-    OP_CONSTANT_INTEGER_32,
-    OP_NEGATE_INTEGER_32,
+    OP_PRINT,
+
     OP_ADD_INTEGER_32,
     OP_SUBTRACT_INTEGER_32,
     OP_MULTIPLY_INTEGER_32,
     OP_DIVIDE_INTEGER_32,
+    OP_NEGATE_INTEGER_32,
+
+    // Two bytes
+    OP_CONSTANT_INTEGER_32,
 };
 
 typedef struct {

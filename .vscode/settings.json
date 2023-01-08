@@ -3,6 +3,7 @@
         "lexer.h": "c",
         "stdlib.h": "c",
         "dyn_list.h": "c",
-        "value.h": "c"
+        "value.h": "c",
+        "stdio.h": "c"
     }
 }

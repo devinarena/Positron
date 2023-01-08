@@ -107,10 +107,9 @@ size_t block_print_opcode(Block* block, size_t index) {
     case OP_NOP:
       printf("OP_NOP");
       return 1;
-    case OP_CONSTANT_INTEGER_32:
-      printf("OP_CONSTANT_INTEGER_32 [%d]",
-             *(uint8_t*)block->opcodes->data[index + 1]);
-      return 2;
+    case OP_PRINT:
+      printf("OP_PRINT");
+      return 1;
     case OP_NEGATE_INTEGER_32:
       printf("OP_NEGATE_INTEGER_32");
       return 1;
@@ -126,8 +125,12 @@ size_t block_print_opcode(Block* block, size_t index) {
     case OP_DIVIDE_INTEGER_32:
       printf("OP_DIVIDE_INTEGER_32");
       return 1;
+    case OP_CONSTANT_INTEGER_32:
+      printf("OP_CONSTANT_INTEGER_32 [%d]",
+             *(uint8_t*)block->opcodes->data[index + 1]);
+      return 2;
     default:
       printf("Unknown opcode: %d", *opcode);
-      return 0;
+      return 1;
   }
 }

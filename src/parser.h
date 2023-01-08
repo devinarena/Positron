@@ -6,9 +6,10 @@
 * @since 1/6/2023
 **/
 
-#ifndef PARSER_H
-#define PARSER_H
+#ifndef POSITRON_PARSER_H
+#define POSITRON_PARSER_H
 
+#include "positron.h"
 #include "token.h"
 #include "block.h"
 
@@ -22,5 +23,6 @@ typedef struct Parser {
 void parser_init(Block* block);
 
 Value* expression();
+void statement();
 
 #endif

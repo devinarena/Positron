@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "lexer.h"
 #include "token.h"
@@ -65,32 +66,55 @@ static void skip_whitespace() {
  * @return Token* the token representing the number (floating point or integer)
  */
 static Token* number() {
-  char c;
-  char* buffer = malloc(sizeof(char) * 40);
-  int i = 0;
   enum TokenType type = TOKEN_LITERAL_INTEGER;
-
-  while (isdigit(c = peek())) {
-    buffer[i++] = c;
+  int start = lexer.index;
+  while (isdigit(peek()))
     lexer.index++;
-  }
 
+  // check for a decimal point
   if (peek() == '.' && isdigit(peek_next())) {
     type = TOKEN_LITERAL_FLOATING;
-    buffer[i++] = '.';
+    // consume the decimal point
     lexer.index++;
 
-    while (isdigit(c = peek())) {
-      buffer[i++] = c;
+    while (isdigit(peek()))
       lexer.index++;
-    }
   }
 
-  buffer[i] = '\0';
+  int length = lexer.index - start;
+  char* buffer = malloc(sizeof(char) * (length + 1));
+  memcpy(buffer, &lexer.input[start], length);
+  buffer[length] = '\0';
 
   return token_new(type, buffer, lexer.line);
 }
 
+static Token* identifier() {
+  int start = lexer.index;
+  lexer.index++;
+  while (isalnum(peek()))
+    lexer.index++;
+
+  int length = lexer.index - start;
+  char* buffer = malloc(sizeof(char) * (length + 1));
+  memcpy(buffer, &lexer.input[start], length);
+  buffer[length] = '\0';
+
+  if (strcmp(buffer, "print") == 0) {
+    return token_new(TOKEN_PRINT, buffer, lexer.line);
+  }
+
+  return token_new(TOKEN_IDENTIFIER, buffer, lexer.line);
+}
+
+/**
+ * @brief Helper for generating single character tokens (need to allocate a
+ * string)
+ *
+ * @param type the type of token to generate
+ * @param c the character to generate the token from
+ * @return Token* the token generated
+ */
 static Token* single_char_token(enum TokenType type, char c) {
   char* buffer = malloc(sizeof(char) * 2);
   buffer[0] = c;
@@ -112,6 +136,10 @@ Token* lexer_next_token() {
     return number();
   }
 
+  if (isalpha(c)) {
+    return identifier();
+  }
+
   switch (c) {
     case '+': {
       return single_char_token(TOKEN_PLUS, c);
@@ -130,6 +158,9 @@ Token* lexer_next_token() {
     }
     case ')': {
       return single_char_token(TOKEN_RPAREN, c);
+    }
+    case ';': {
+      return single_char_token(TOKEN_SEMICOLON, c);
     }
     case '\0': {
       char* buffer = malloc(sizeof(char));

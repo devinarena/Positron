@@ -24,7 +24,9 @@ static void advance() {
     return;
   parser.previous = parser.current;
   parser.current = lexer_next_token();
+#ifdef POSITRON_DEBUG
   token_print(parser.current);
+#endif
 }
 
 /**
@@ -67,6 +69,7 @@ static void consume(enum TokenType type) {
     advance();
     return;
   }
+  // TODO: create a better error message
   printf("Expected token of type ");
   token_type_print(type);
   printf(" but got token of type ");
@@ -98,6 +101,7 @@ static Value* literal() {
     block_new_opcodes(parser.block, OP_CONSTANT_INTEGER_32, index);
     return val;
   } else {
+    // TODO: create a better error message
     printf("Expected literal but got token of type ");
     token_type_print(parser.current->type);
     printf(" on line %d\n", parser.current->line);
@@ -134,7 +138,7 @@ static Value* term() {
 
   while (match(TOKEN_STAR) || match(TOKEN_SLASH)) {
     enum TokenType op = parser.previous->type;
-    val = term();
+    val = factor();
     if (op == TOKEN_STAR) {
       block_new_opcode(parser.block, OP_MULTIPLY_INTEGER_32);
     } else if (op == TOKEN_SLASH) {
@@ -183,4 +187,15 @@ Value* expression() {
   }
 
   return val;
+}
+
+/**
+ * @brief Parses a statement.
+ */
+void statement() {
+  if (match(TOKEN_PRINT)) {
+    expression();
+    block_new_opcode(parser.block, OP_PRINT);
+  }
+  match(TOKEN_SEMICOLON);
 }

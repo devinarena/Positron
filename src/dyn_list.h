@@ -1,6 +1,6 @@
 
-#ifndef DYN_LIST_H
-#define DYN_LIST_H
+#ifndef POSITRON_DYN_LIST_H
+#define POSITRON_DYN_LIST_H
 
 #include <stdlib.h>
 

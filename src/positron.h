@@ -1,14 +1,16 @@
 
 /**
-* @file language.h
+* @file positron.h
 * @author Devin Arena
 * @brief Contains global information for the language.
 * @since 1/6/2023
 **/
 
-#ifndef LANGUAGE_H
-#define LANGUAGE_H
+#ifndef POSITRON_H
+#define POSITRON_H
 
-#define LANGUAGE_DEBUG
+#define STACK_SIZE 256
+
+#define POSITRON_DEBUG
 
 #endif
