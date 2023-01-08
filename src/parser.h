@@ -13,6 +13,7 @@
 #include "token.h"
 #include "block.h"
 #include "hash_table.h"
+#include "object.h"
 
 typedef struct Parser {
     Token* current;

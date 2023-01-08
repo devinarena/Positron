@@ -110,6 +110,12 @@ size_t block_print_opcode(Block* block, size_t index) {
     case OP_PRINT:
       printf("OP_PRINT");
       return 1;
+    case OP_GLOBAL_DEFINE:
+      printf("OP_GLOBAL_DEFINE");
+      return 2;
+    case OP_GLOBAL_SET:
+      printf("OP_GLOBAL_SET");
+      return 2;
     case OP_NEGATE_INTEGER_32:
       printf("OP_NEGATE_INTEGER_32");
       return 1;

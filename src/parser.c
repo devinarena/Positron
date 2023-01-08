@@ -249,6 +249,23 @@ void statement() {
   if (match(TOKEN_PRINT)) {
     expression();
     block_new_opcode(parser.block, OP_PRINT);
+  } else if (match(TOKEN_I32)) {
+    consume(TOKEN_IDENTIFIER);
+    
+    const char* name = parser.previous->lexeme;
+    PString* pstr = p_object_string_new(name);
+    uint8_t index = block_new_constant(parser.block, value_new_object((PObject*)pstr));
+    
+    block_new_opcodes(parser.block, OP_CONSTANT, index);
+    block_new_opcode(parser.block, OP_GLOBAL_DEFINE);
+    
+    consume(TOKEN_EQUAL);
+    
+    Value* val = expression();
+    hash_table_set(&parser.globals, name, val);
+
+    block_new_opcodes(parser.block, OP_CONSTANT, index);
+    block_new_opcode(parser.block, OP_GLOBAL_SET);
   } else {
     expression();
   }

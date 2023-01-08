@@ -104,6 +104,8 @@ static Token* identifier() {
     return token_new(TOKEN_PRINT, buffer, lexer.line);
   } else if (strcmp(buffer, "null") == 0) {
     return token_new(TOKEN_NULL, buffer, lexer.line);
+  } else if (strcmp(buffer, "i32") == 0) {
+    return token_new(TOKEN_I32, buffer, lexer.line);
   }
 
   return token_new(TOKEN_IDENTIFIER, buffer, lexer.line);
@@ -154,6 +156,9 @@ Token* lexer_next_token() {
     }
     case '/': {
       return single_char_token(TOKEN_SLASH, c);
+    }
+    case '=': {
+      return single_char_token(TOKEN_EQUAL, c);
     }
     case '(': {
       return single_char_token(TOKEN_LPAREN, c);

@@ -17,9 +17,10 @@ enum TokenType {
   TOKEN_LITERAL_FLOATING,
   
   // keywords
+  TOKEN_I32,
   TOKEN_NULL,
   TOKEN_PRINT,
-  
+
   TOKEN_IDENTIFIER,
 
   // single character tokens
@@ -27,6 +28,7 @@ enum TokenType {
   TOKEN_MINUS,
   TOKEN_STAR,
   TOKEN_SLASH,
+  TOKEN_EQUAL,
   TOKEN_LPAREN,
   TOKEN_RPAREN,
   // Thinking semi-colons will be optional for now

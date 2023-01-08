@@ -21,10 +21,26 @@ Value* value_new_int_32(int data) {
   return value;
 }
 
+/**
+ * @brief Allocates and returns a new null value.
+ *
+ * @return Value* a pointer to the newly allocated value
+ */
 Value* value_new_null() {
   Value* value = malloc(sizeof(Value));
   value->type = VAL_NULL;
   value->data.integer_32 = 0;
+  return value;
+}
+
+/**
+ * @brief Allocates a new object value and returns a pointer to it.
+ * 
+ */
+Value* value_new_object(PObject* object) {
+  Value* value = malloc(sizeof(Value));
+  value->type = VAL_OBJ;
+  value->data.reference = object;
   return value;
 }
 
@@ -40,6 +56,9 @@ void value_print(Value* value) {
       break;
     case VAL_INTEGER_32:
       printf("%d", value->data.integer_32);
+      break;
+    case VAL_OBJ:
+      p_object_print(value->data.reference);
       break;
     default:
       printf("null");
@@ -59,6 +78,9 @@ void value_type_print(enum ValueType type) {
       break;
     case VAL_INTEGER_32:
       printf("i32");
+      break;
+    case VAL_OBJ:
+      printf("obj");
       break;
     default:
       printf("null");

@@ -6,9 +6,9 @@
  * @since 5/26/2022
  **/
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 #include "hash_table.h"
 
@@ -45,7 +45,7 @@ void hash_table_free(HashTable* table) {
  * @param key PdString* the key to search for.
  * @return Entry* the entry that was found.
  */
-static Entry* findEntry(Entry* entries, int capacity, char* key) {
+static Entry* findEntry(Entry* entries, int capacity, const char* key) {
   uint32_t index = (HASH_STRING(key) & (capacity - 1));
   Entry* tombstone = NULL;
 
@@ -65,7 +65,7 @@ static Entry* findEntry(Entry* entries, int capacity, char* key) {
 
     index = (index + 1) & (capacity - 1);
   }
-  
+
   return NULL;
 }
 
@@ -109,7 +109,7 @@ static void adjustCapacity(HashTable* table, int capacity) {
  * @param key PdString* the key to search for.
  * @return bool true if the key was found, false otherwise.
  */
-char* hash_table_get(HashTable* table, char* key) {
+Value* hash_table_get(HashTable* table, const char* key) {
   if (table->count == 0)
     return NULL;
 
@@ -130,7 +130,7 @@ char* hash_table_get(HashTable* table, char* key) {
  * @param value Value the value to set.
  * @return bool true if the key is not found, false otherwise.
  */
-bool hash_table_set(HashTable* table, char* key, char* value) {
+bool hash_table_set(HashTable* table, const char* key, Value* value) {
   if (table->count + 1 > table->capacity * TABLE_MAX_LOAD) {
     int capacity = table->capacity < 8 ? 8 : table->capacity * 2;
     adjustCapacity(table, capacity);
@@ -153,7 +153,7 @@ bool hash_table_set(HashTable* table, char* key, char* value) {
  * @param key PdString* the key to delete.
  * @return bool true if the key was found, false otherwise.
  */
-bool hash_table_delete(HashTable* table, char* key) {
+bool hash_table_delete(HashTable* table, const char* key) {
   if (table->count == 0)
     return false;
 
@@ -162,7 +162,8 @@ bool hash_table_delete(HashTable* table, char* key) {
     return false;
 
   entry->key = NULL;
-  entry->value = "!tombstone"; // tombstone
+  entry->value = value_new_null();  // tombstone
+  entry->value->data.integer_32 = -1;
   return true;
 }
 
@@ -192,10 +193,10 @@ void hash_table_add_all(HashTable* from, HashTable* to) {
  * @param hash uint32_t the hash of the string.
  * @return PdString* the string that was found or NULL.
  */
-char* hash_table_find_string(HashTable* table,
-                           const char* chars,
-                           size_t length,
-                           uint32_t hash) {
+const char* hash_table_find_string(HashTable* table,
+                                   const char* chars,
+                                   size_t length,
+                                   uint32_t hash) {
   if (table->count == 0)
     return NULL;
 
@@ -205,13 +206,42 @@ char* hash_table_find_string(HashTable* table,
     Entry* entry = &table->entries[index];
 
     if (entry->key == NULL) {
-      if (entry->value== NULL)
+      if (entry->value == NULL)
         return NULL;
-    } else if (strlen(entry->key) == length && HASH_STRING(entry->key) == hash &&
+    } else if (strlen(entry->key) == length &&
+               HASH_STRING(entry->key) == hash &&
                memcmp(entry->key, chars, length) == 0) {
       return entry->key;
     }
 
     index = (index + 1) & (table->capacity - 1);
   }
+}
+
+/**
+ * @brief Prints a hash table.
+ *
+ * @param table Table* the table to print.
+ */
+void hash_table_print(HashTable* table) {
+  printf("table: %p\n", table);
+  printf(" count: %d\n", table->count);
+  printf(" capacity: %d\n", table->capacity);
+  printf(" entries: %p\n", table->entries);
+  printf(" entries: [\n");
+  for (int i = 0; i < table->capacity; i++) {
+    Entry* entry = &table->entries[i];
+    if (entry->key) {
+      printf("  {\n");
+      printf("  key: %p\n", entry->key);
+      printf("  value: ");
+      if (entry->value)
+        value_print(entry->value);
+      else
+        printf("%p", entry->value);
+      printf("\n  }\n");
+    }
+  }
+  printf(" ]\n");
+  printf(" }");
 }

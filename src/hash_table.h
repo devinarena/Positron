@@ -12,11 +12,13 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "value.h"
+
 #define HASH_STRING(str) hashString(str, strlen(str))
 
 typedef struct {
-  char* key;
-  char* value;
+  const char* key;
+  Value* value;
 } Entry;
 
 typedef struct HashTable {
@@ -26,14 +28,15 @@ typedef struct HashTable {
 } HashTable;
 
 void hash_table_init(HashTable* table);
-char* hash_table_get(HashTable* table, char* key);
-bool hash_table_set(HashTable* table, char* key, char* value);
-bool hash_table_delete(HashTable* table, char* key);
+Value* hash_table_get(HashTable* table, const char* key);
+bool hash_table_set(HashTable* table, const char* key, Value* value);
+bool hash_table_delete(HashTable* table, const char* key);
 void hash_table_add_all(HashTable* from, HashTable* to);
-char* hash_table_find_string(HashTable* table,
+const char* hash_table_find_string(HashTable* table,
                              const char* chars,
                              size_t length,
                              uint32_t hash);
+void hash_table_print(HashTable* table);
 void hash_table_free(HashTable* table);
 
 static inline uint32_t hashString(const char* key, size_t length) {

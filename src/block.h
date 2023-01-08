@@ -20,6 +20,8 @@ enum OpCode {
     // 1 byte
     OP_NOP,
     OP_PRINT,
+    OP_GLOBAL_DEFINE,
+    OP_GLOBAL_SET,
 
     OP_ADD_INTEGER_32,
     OP_SUBTRACT_INTEGER_32,

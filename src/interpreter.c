@@ -108,8 +108,21 @@ void interpret(Block* block) {
         interpreter.ip++;
         break;
       }
+      case OP_GLOBAL_DEFINE: {
+        Value* name = pop_stack();
+        hash_table_set(&interpreter.globals, ((PString*)name->data.reference)->value, NULL);
+        interpreter.ip++;
+        break;
+      }
+      case OP_GLOBAL_SET: {
+        Value* name = pop_stack();
+        Value* value = pop_stack();
+        hash_table_set(&interpreter.globals, ((PString*)name->data.reference)->value, value);
+        interpreter.ip++;
+        break;
+      }
       default: {
-        printf("Unknown opcode: %d",
+        printf("Unknown opcode: %d\n",
                *(uint8_t*)block->opcodes->data[interpreter.ip]);
         exit(1);
       }
@@ -140,6 +153,8 @@ void interpreter_print(Block* block) {
     value_print(value);
     printf("]");
   }
+  printf("\nGlobals: ");
+  hash_table_print(&interpreter.globals);
   printf("\n==========================================\n");
 }
 
