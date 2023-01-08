@@ -9,12 +9,14 @@
 #ifndef INTERPRETER_H
 #define INTERPRETER_H
 
-typedef struct Interpreter {
+#include "block.h"
 
+typedef struct Interpreter {
+    size_t ip;
 } Interpreter;
 
 // Initialize the interpreter's memory.
 void interpreter_init();
-
+void interpret(Block* block);
 
 #endif

@@ -36,6 +36,8 @@ int main(int argc, const char* argv[]) {
   
   interpreter_init();
 
+  interpret(block);
+
   block_free(block);
   free((void*)source);
 

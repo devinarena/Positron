@@ -33,15 +33,34 @@ Token* token_new(enum TokenType type, const char* lexeme, int line) {
  */
 void token_print(Token* token) {
   switch (token->type) {
-    case TOKEN_LITERAL_INTEGER:
-      printf("Token(TOKEN_LITERAL_INTEGER, %s, %d)\n", token->lexeme, token->line);
-      break;
     case TOKEN_LITERAL_FLOATING:
-      printf("Token(TOKEN_LITERAL_FLOATING, %s, %d)\n", token->lexeme, token->line);
+    case TOKEN_LITERAL_INTEGER:
+      printf("Token(");
+      token_type_print(token->type);
+      printf(", %s, %d)\n", token->lexeme, token->line);
       break;
     case TOKEN_EOF:
       printf("Token(TOKEN_EOF, \\0, %d)\n", token->line);
       return;
+  }
+}
+
+/**
+ * @brief Prints a token's type.
+ *
+ * @param type the type to print
+ */
+void token_type_print(enum TokenType type) {
+  switch (type) {
+    case TOKEN_LITERAL_FLOATING:
+      printf("TOKEN_LITERAL_FLOATING");
+      break;
+    case TOKEN_LITERAL_INTEGER:
+      printf("TOKEN_LITERAL_INTEGER");
+      break;
+    case TOKEN_EOF:
+      printf("TOKEN_EOF");
+      break;
   }
 }
 
