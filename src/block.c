@@ -18,8 +18,8 @@
 Block* block_new(const char* name) {
   Block* block = malloc(sizeof(Block));
   block->name = name;
-  block->opcodes = new_dyn_list(free);
-  block->constants = new_dyn_list(value_free);
+  block->opcodes = dyn_list_new(free);
+  block->constants = dyn_list_new((void*)(void*)value_free);
   return block;
 }
 
@@ -103,8 +103,8 @@ void block_free(Block* block) {
 size_t block_print_opcode(Block* block, size_t index) {
   uint8_t* opcode = (uint8_t*)block->opcodes->data[index];
   switch (*opcode) {
-    case NOP:
-      printf("NOP");
+    case OP_NOP:
+      printf("OP_NOP");
       return 1;
     case OP_CONSTANT_INTEGER_32:
       printf("OP_CONSTANT_INTEGER_32 [%d]", *(uint8_t*)block->opcodes->data[index + 1]);

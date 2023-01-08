@@ -2,6 +2,8 @@
 #ifndef DYN_LIST_H
 #define DYN_LIST_H
 
+#include <stdlib.h>
+
 #define INITIAL_CAPACITY 8
 #define GROWTH_FACTOR 2
 
@@ -16,7 +18,7 @@ typedef struct {
 } dyn_list;
 
 // allocates and returns a pointer to a new dynamic list
-dyn_list* new_dyn_list(void (*free_object)(void*));
+dyn_list* dyn_list_new(void (*free_object)(void*));
 // frees the memory allocated by a dynamic list
 void dyn_list_free(dyn_list* list);
 // adds an object to the end of the list

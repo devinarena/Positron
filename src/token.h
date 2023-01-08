@@ -11,7 +11,16 @@
 
 #define IS_NUM(c) (c - '0' >= 0 && c - '0' <= 9)
 
-enum TokenType { TOKEN_LITERAL_INTEGER, TOKEN_LITERAL_FLOATING, TOKEN_EOF };
+enum TokenType {
+  // literals
+  TOKEN_LITERAL_INTEGER,
+  TOKEN_LITERAL_FLOATING,
+  
+  // single character tokens
+  TOKEN_MINUS,
+
+  TOKEN_EOF
+};
 
 typedef struct Token {
   enum TokenType type;

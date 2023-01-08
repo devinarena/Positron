@@ -35,6 +35,7 @@ void token_print(Token* token) {
   switch (token->type) {
     case TOKEN_LITERAL_FLOATING:
     case TOKEN_LITERAL_INTEGER:
+    case TOKEN_MINUS:
       printf("Token(");
       token_type_print(token->type);
       printf(", %s, %d)\n", token->lexeme, token->line);
@@ -57,6 +58,9 @@ void token_type_print(enum TokenType type) {
       break;
     case TOKEN_LITERAL_INTEGER:
       printf("TOKEN_LITERAL_INTEGER");
+      break;
+    case TOKEN_MINUS:
+      printf("TOKEN_MINUS");
       break;
     case TOKEN_EOF:
       printf("TOKEN_EOF");

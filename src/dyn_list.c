@@ -10,7 +10,7 @@
  * @param free_object the function to call when an object is removed from the list
  * @return dyn_list* a pointer to the newly allocated dynamic list
  */
-dyn_list* new_dyn_list(void (*free_object)(void*)) {
+dyn_list* dyn_list_new(void (*free_object)(void*)) {
   dyn_list* list = malloc(sizeof(dyn_list));
   list->data = malloc(sizeof(void*) * 8);
   list->size = 0;

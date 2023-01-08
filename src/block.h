@@ -17,8 +17,9 @@
 #include "value.h"
 
 enum OpCode {
-    NOP,
+    OP_NOP,
     OP_CONSTANT_INTEGER_32,
+    OP_NEGATE_INTEGER_32,
 };
 
 typedef struct {
