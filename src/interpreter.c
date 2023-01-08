@@ -12,23 +12,36 @@ Interpreter interpreter;
 
 void interpreter_init() {
   interpreter.ip = 0;
-  interpreter.stack = dyn_list_new(NULL);
+  interpreter.sp = -1;
 }
 
 static Value* pop_stack() {
-  if (interpreter.stack->size == 0) {
+  if (interpreter.sp < 0) {
     printf("pop from empty stack");
     exit(1);
   }
-  Value* value = interpreter.stack->data[interpreter.stack->size - 1];
-  dyn_list_pop(interpreter.stack);
+  Value* value = &interpreter.stack[interpreter.sp--];
   return value;
 }
 
+/**
+ * @brief Pushes a value onto the stack.
+ * 
+ * @param value 
+ */
 static void push_stack(Value* value) {
-  dyn_list_add(interpreter.stack, value);
+  if (interpreter.sp == STACK_SIZE) {
+    printf("stack overflow");
+    exit(1);
+  }
+  interpreter.stack[++interpreter.sp] = *value;
 }
 
+/**
+ * @brief Interprets the emitted opcodes of a block.
+ * 
+ * @param block the block to interpret
+ */
 void interpret(Block* block) {
   interpreter_init();
 
@@ -77,8 +90,8 @@ void interpreter_print(Block* block) {
     block_print_opcode(block, interpreter.ip);
   }
   printf("\nstack: ");
-  for (size_t i = 0; i < interpreter.stack->size; i++) {
-    Value* value = interpreter.stack->data[i];
+  for (int i = 0; i <= interpreter.sp; i++) {
+    Value* value = &interpreter.stack[i];
     printf("[");
     value_print(value);
     printf("]");
@@ -90,5 +103,4 @@ void interpreter_print(Block* block) {
  * @brief Frees the memory allocated by the interpreter.
  */
 void interpreter_free() {
-  dyn_list_free(interpreter.stack);
 }

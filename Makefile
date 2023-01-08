@@ -3,4 +3,4 @@ all:
 
 debug:
 	gcc src/*.c -o program -Wall -Wextra -g
-	./program input
+	./program input.pt

@@ -9,12 +9,15 @@
 #ifndef INTERPRETER_H
 #define INTERPRETER_H
 
+#define STACK_SIZE 256
+
 #include "dyn_list.h"
 #include "block.h"
 
 typedef struct Interpreter {
     size_t ip;
-    dyn_list* stack;
+    int sp;
+    Value stack[STACK_SIZE];
 } Interpreter;
 
 // Initialize the interpreter's memory.
