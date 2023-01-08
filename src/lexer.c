@@ -91,6 +91,14 @@ static Token* number() {
   return token_new(type, buffer, lexer.line);
 }
 
+static Token* single_char_token(enum TokenType type, char c) {
+  char* buffer = malloc(sizeof(char) * 2);
+  buffer[0] = c;
+  buffer[1] = '\0';
+  lexer.index++;
+  return token_new(type, buffer, lexer.line);
+}
+
 /**
  * @brief Scans the next token and returns it.
  */
@@ -105,12 +113,23 @@ Token* lexer_next_token() {
   }
 
   switch (c) {
+    case '+': {
+      return single_char_token(TOKEN_PLUS, c);
+    }
     case '-': {
-      char* buffer = malloc(sizeof(char) * 2);
-      buffer[0] = '-';
-      buffer[1] = '\0';
-      lexer.index++;
-      return token_new(TOKEN_MINUS, buffer, lexer.line);
+      return single_char_token(TOKEN_MINUS, c);
+    }
+    case '*': {
+      return single_char_token(TOKEN_STAR, c);
+    }
+    case '/': {
+      return single_char_token(TOKEN_SLASH, c);
+    }
+    case '(': {
+      return single_char_token(TOKEN_LPAREN, c);
+    }
+    case ')': {
+      return single_char_token(TOKEN_RPAREN, c);
     }
     case '\0': {
       char* buffer = malloc(sizeof(char));

@@ -17,7 +17,12 @@ enum TokenType {
   TOKEN_LITERAL_FLOATING,
   
   // single character tokens
+  TOKEN_PLUS,
   TOKEN_MINUS,
+  TOKEN_STAR,
+  TOKEN_SLASH,
+  TOKEN_LPAREN,
+  TOKEN_RPAREN,
 
   TOKEN_EOF
 };

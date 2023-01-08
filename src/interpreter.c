@@ -20,7 +20,7 @@ static Value* pop_stack() {
     printf("pop from empty stack");
     exit(1);
   }
-  Value* value = &interpreter.stack[interpreter.sp--];
+  Value* value = interpreter.stack[interpreter.sp--];
   return value;
 }
 
@@ -34,7 +34,7 @@ static void push_stack(Value* value) {
     printf("stack overflow");
     exit(1);
   }
-  interpreter.stack[++interpreter.sp] = *value;
+  interpreter.stack[++interpreter.sp] = value;
 }
 
 /**
@@ -59,6 +59,38 @@ void interpret(Block* block) {
         Value* v = pop_stack();
         v->data.integer_32 = -v->data.integer_32;
         push_stack(v);
+        interpreter.ip++;
+        break;
+      }
+      case OP_ADD_INTEGER_32: {
+        Value* v2 = pop_stack();
+        Value* v1 = pop_stack();
+        v1->data.integer_32 += v2->data.integer_32;
+        push_stack(v1);
+        interpreter.ip++;
+        break;
+      }
+      case OP_SUBTRACT_INTEGER_32: {
+        Value* v2 = pop_stack();
+        Value* v1 = pop_stack();
+        v1->data.integer_32 -= v2->data.integer_32;
+        push_stack(v1);
+        interpreter.ip++;
+        break;
+      }
+      case OP_MULTIPLY_INTEGER_32: {
+        Value* v2 = pop_stack();
+        Value* v1 = pop_stack();
+        v1->data.integer_32 *= v2->data.integer_32;
+        push_stack(v1);
+        interpreter.ip++;
+        break;
+      }
+      case OP_DIVIDE_INTEGER_32: {
+        Value* v2 = pop_stack();
+        Value* v1 = pop_stack();
+        v1->data.integer_32 /= v2->data.integer_32;
+        push_stack(v1);
         interpreter.ip++;
         break;
       }
@@ -91,7 +123,7 @@ void interpreter_print(Block* block) {
   }
   printf("\nstack: ");
   for (int i = 0; i <= interpreter.sp; i++) {
-    Value* value = &interpreter.stack[i];
+    Value* value = interpreter.stack[i];
     printf("[");
     value_print(value);
     printf("]");

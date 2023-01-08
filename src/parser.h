@@ -21,6 +21,6 @@ typedef struct Parser {
 // initializes the parser with the given block
 void parser_init(Block* block);
 
-void expression();
+Value* expression();
 
 #endif

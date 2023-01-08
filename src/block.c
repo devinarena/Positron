@@ -98,7 +98,8 @@ void block_free(Block* block) {
 }
 
 /**
- * @brief Prints an opcode name and returns the number of bytes the opcode takes.
+ * @brief Prints an opcode name and returns the number of bytes the opcode
+ * takes.
  */
 size_t block_print_opcode(Block* block, size_t index) {
   uint8_t* opcode = (uint8_t*)block->opcodes->data[index];
@@ -107,10 +108,23 @@ size_t block_print_opcode(Block* block, size_t index) {
       printf("OP_NOP");
       return 1;
     case OP_CONSTANT_INTEGER_32:
-      printf("OP_CONSTANT_INTEGER_32 [%d]", *(uint8_t*)block->opcodes->data[index + 1]);
+      printf("OP_CONSTANT_INTEGER_32 [%d]",
+             *(uint8_t*)block->opcodes->data[index + 1]);
       return 2;
     case OP_NEGATE_INTEGER_32:
       printf("OP_NEGATE_INTEGER_32");
+      return 1;
+    case OP_ADD_INTEGER_32:
+      printf("OP_ADD_INTEGER_32");
+      return 1;
+    case OP_SUBTRACT_INTEGER_32:
+      printf("OP_SUBTRACT_INTEGER_32");
+      return 1;
+    case OP_MULTIPLY_INTEGER_32:
+      printf("OP_MULTIPLY_INTEGER_32");
+      return 1;
+    case OP_DIVIDE_INTEGER_32:
+      printf("OP_DIVIDE_INTEGER_32");
       return 1;
     default:
       printf("Unknown opcode: %d", *opcode);
