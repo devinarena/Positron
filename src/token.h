@@ -17,7 +17,9 @@ enum TokenType {
   TOKEN_LITERAL_FLOATING,
   
   // keywords
+  TOKEN_NULL,
   TOKEN_PRINT,
+  
   TOKEN_IDENTIFIER,
 
   // single character tokens

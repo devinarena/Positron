@@ -102,6 +102,8 @@ static Token* identifier() {
 
   if (strcmp(buffer, "print") == 0) {
     return token_new(TOKEN_PRINT, buffer, lexer.line);
+  } else if (strcmp(buffer, "null") == 0) {
+    return token_new(TOKEN_NULL, buffer, lexer.line);
   }
 
   return token_new(TOKEN_IDENTIFIER, buffer, lexer.line);

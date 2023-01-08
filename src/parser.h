@@ -12,15 +12,19 @@
 #include "positron.h"
 #include "token.h"
 #include "block.h"
+#include "hash_table.h"
 
 typedef struct Parser {
     Token* current;
     Token* previous;
     Block* block;
+    HashTable globals;
 } Parser;
 
 // initializes the parser with the given block
 void parser_init(Block* block);
+// frees the parser's memory
+void parser_free();
 
 Value* expression();
 void statement();

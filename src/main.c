@@ -32,6 +32,8 @@ int main(int argc, const char* argv[]) {
   
   statement();
 
+  parser_free();
+
 #ifdef POSITRON_DEBUG
   block_print(block);
 #endif

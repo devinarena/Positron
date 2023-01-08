@@ -87,8 +87,16 @@ void parser_init(Block* block) {
   parser.block = block;
   parser.current = NULL;
   parser.previous = NULL;
+  hash_table_init(&parser.globals);
 
   advance();
+}
+
+/**
+ * @brief Frees the parser's memory.
+ */
+void parser_free() {
+  hash_table_free(&parser.globals);
 }
 
 /**
@@ -98,7 +106,12 @@ static Value* literal() {
   if (match(TOKEN_LITERAL_INTEGER)) {
     Value* val = value_new_int_32(atoi(parser.previous->lexeme));
     uint8_t index = block_new_constant(parser.block, val);
-    block_new_opcodes(parser.block, OP_CONSTANT_INTEGER_32, index);
+    block_new_opcodes(parser.block, OP_CONSTANT, index);
+    return val;
+  } else if (match(TOKEN_NULL)) {
+    Value* val = value_new_null();
+    uint8_t index = block_new_constant(parser.block, val);
+    block_new_opcodes(parser.block, OP_CONSTANT, index);
     return val;
   } else {
     // TODO: create a better error message
@@ -138,12 +151,33 @@ static Value* term() {
 
   while (match(TOKEN_STAR) || match(TOKEN_SLASH)) {
     enum TokenType op = parser.previous->type;
-    val = factor();
+    Value* rhs = factor();
     if (op == TOKEN_STAR) {
-      block_new_opcode(parser.block, OP_MULTIPLY_INTEGER_32);
+      if (val->type == VAL_INTEGER_32 && rhs->type == VAL_INTEGER_32) {
+        block_new_opcode(parser.block, OP_MULTIPLY_INTEGER_32);
+      } else {
+        // TODO: create a better error message
+        printf("Cannot multiply values of type ");
+        value_type_print(val->type);
+        printf(" and ");
+        value_type_print(rhs->type);
+        printf(" on line %d\n", parser.current->line);
+        exit(1);
+      }
     } else if (op == TOKEN_SLASH) {
-      block_new_opcode(parser.block, OP_DIVIDE_INTEGER_32);
+      if (val->type == VAL_INTEGER_32 && rhs->type == VAL_INTEGER_32) {
+        block_new_opcode(parser.block, OP_DIVIDE_INTEGER_32);
+      } else {
+        // TODO: create a better error message
+        printf("Cannot divide values of type ");
+        value_type_print(val->type);
+        printf(" and ");
+        value_type_print(rhs->type);
+        printf(" on line %d\n", parser.current->line);
+        exit(1);
+      }
     }
+    val = rhs;
   }
 
   return val;
@@ -178,12 +212,31 @@ Value* expression() {
   // infix operators
   while (match(TOKEN_PLUS) || match(TOKEN_MINUS)) {
     enum TokenType op = parser.previous->type;
-    val = term();
+    Value* rhs = term();
     if (op == TOKEN_PLUS) {
-      block_new_opcode(parser.block, OP_ADD_INTEGER_32);
+      if (val->type == VAL_INTEGER_32 && rhs->type == VAL_INTEGER_32) {
+        block_new_opcode(parser.block, OP_ADD_INTEGER_32);
+      } else {
+        // TODO: create a better error message
+        printf("Cannot add values of type ");
+        value_type_print(val->type);
+        printf(" and ");
+        value_type_print(rhs->type);
+        printf(" on line %d\n", parser.current->line);
+      }
     } else if (op == TOKEN_MINUS) {
-      block_new_opcode(parser.block, OP_SUBTRACT_INTEGER_32);
+      if (val->type == VAL_INTEGER_32 && rhs->type == VAL_INTEGER_32) {
+        block_new_opcode(parser.block, OP_SUBTRACT_INTEGER_32);
+      } else {
+        // TODO: create a better error message
+        printf("Cannot subtract values of type ");
+        value_type_print(val->type);
+        printf(" and ");
+        value_type_print(rhs->type);
+        printf(" on line %d\n", parser.current->line);
+      }
     }
+    val = rhs;
   }
 
   return val;
@@ -196,6 +249,8 @@ void statement() {
   if (match(TOKEN_PRINT)) {
     expression();
     block_new_opcode(parser.block, OP_PRINT);
+  } else {
+    expression();
   }
   match(TOKEN_SEMICOLON);
 }

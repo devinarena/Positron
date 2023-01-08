@@ -10,13 +10,15 @@
 #define POSITRON_INTERPRETER_H
 
 #include "positron.h"
-#include "dyn_list.h"
 #include "block.h"
+#include "dyn_list.h"
+#include "hash_table.h"
 
 typedef struct Interpreter {
     size_t ip;
     int sp;
     Value* stack[STACK_SIZE];
+    HashTable globals;
 } Interpreter;
 
 // Initialize the interpreter's memory.

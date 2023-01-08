@@ -125,8 +125,8 @@ size_t block_print_opcode(Block* block, size_t index) {
     case OP_DIVIDE_INTEGER_32:
       printf("OP_DIVIDE_INTEGER_32");
       return 1;
-    case OP_CONSTANT_INTEGER_32:
-      printf("OP_CONSTANT_INTEGER_32 [%d]",
+    case OP_CONSTANT:
+      printf("OP_CONSTANT [%d]",
              *(uint8_t*)block->opcodes->data[index + 1]);
       return 2;
     default:

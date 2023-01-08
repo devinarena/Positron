@@ -22,6 +22,7 @@ typedef struct {
 } Value;
 
 // allocates a new value and returns a pointer to it
+Value* value_new_null();
 Value* value_new_int_32(int data);
 // prints a value's data
 void value_print(Value* value);

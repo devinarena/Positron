@@ -21,6 +21,13 @@ Value* value_new_int_32(int data) {
   return value;
 }
 
+Value* value_new_null() {
+  Value* value = malloc(sizeof(Value));
+  value->type = VAL_NULL;
+  value->data.integer_32 = 0;
+  return value;
+}
+
 /**
  * @brief Prints a value's data.
  *
@@ -28,6 +35,9 @@ Value* value_new_int_32(int data) {
  */
 void value_print(Value* value) {
   switch (value->type) {
+    case VAL_NULL:
+      printf("null");
+      break;
     case VAL_INTEGER_32:
       printf("%d", value->data.integer_32);
       break;
@@ -44,6 +54,9 @@ void value_print(Value* value) {
  */
 void value_type_print(enum ValueType type) {
   switch (type) {
+    case VAL_NULL:
+      printf("null");
+      break;
     case VAL_INTEGER_32:
       printf("i32");
       break;
@@ -57,5 +70,5 @@ void value_type_print(enum ValueType type) {
  * @brief Frees the memory allocated by a value.
  */
 void value_free(Value* value) {
-    free(value);
+  free(value);
 }

@@ -13,6 +13,7 @@ Interpreter interpreter;
 void interpreter_init() {
   interpreter.ip = 0;
   interpreter.sp = -1;
+  hash_table_init(&interpreter.globals);
 }
 
 static Value* pop_stack() {
@@ -100,7 +101,7 @@ void interpret(Block* block) {
         interpreter.ip++;
         break;
       }
-      case OP_CONSTANT_INTEGER_32: {
+      case OP_CONSTANT: {
         uint8_t index = *(uint8_t*)block->opcodes->data[++interpreter.ip];
         Value* constant = block->constants->data[index];
         push_stack(constant);
@@ -145,4 +146,6 @@ void interpreter_print(Block* block) {
 /**
  * @brief Frees the memory allocated by the interpreter.
  */
-void interpreter_free() {}
+void interpreter_free() {
+  hash_table_free(&interpreter.globals);
+}

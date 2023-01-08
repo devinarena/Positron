@@ -28,7 +28,7 @@ enum OpCode {
     OP_NEGATE_INTEGER_32,
 
     // Two bytes
-    OP_CONSTANT_INTEGER_32,
+    OP_CONSTANT,
 };
 
 typedef struct {
