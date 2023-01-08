@@ -69,20 +69,20 @@ uint8_t block_new_constant(Block* block, Value* constant) {
  * @param block the block to print
  */
 void block_print(Block* block) {
-  printf("===== Block: %s =====\n", block->name);
-  printf("===== Opcodes =====\n");
+  printf("========== Block: %s ==========\n", block->name);
+  printf("========== Opcodes ==========\n");
   for (size_t i = 0; i < block->opcodes->size;) {
-    printf("%d: ", (int)i);
+    printf("%.8d: ", (int)i);
     i += block_print_opcode(block, i);
     printf("\n");
   }
-  printf("===== Constants =====\n");
+  printf("========== Constants ==========\n");
   for (size_t i = 0; i < block->constants->size; i++) {
-    printf("%d: ", (int)i);
+    printf("%.4d: ", (int)i);
     value_print(block->constants->data[i]);
     printf("\n");
   }
-  printf("===== End Block =====\n");
+  printf("========== End Block ==========\n");
 }
 
 /**
@@ -109,6 +109,9 @@ size_t block_print_opcode(Block* block, size_t index) {
     case OP_CONSTANT_INTEGER_32:
       printf("OP_CONSTANT_INTEGER_32 [%d]", *(uint8_t*)block->opcodes->data[index + 1]);
       return 2;
+    case OP_NEGATE_INTEGER_32:
+      printf("OP_NEGATE_INTEGER_32");
+      return 1;
     default:
       printf("Unknown opcode: %d", *opcode);
       return 0;

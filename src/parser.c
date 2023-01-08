@@ -12,6 +12,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "token.h"
+#include "value.h"
 
 Parser parser;
 
@@ -74,18 +75,36 @@ void parser_init(Block* block) {
 /**
  * @brief Parses a literal.
  */
-static void literal() {
+static Value* literal() {
   if (match(TOKEN_LITERAL_INTEGER)) {
     Value* val = value_new_int_32(atoi(parser.current->lexeme));
     uint8_t index = block_new_constant(parser.block, val);
     block_new_opcodes(parser.block, OP_CONSTANT_INTEGER_32, index);
+    return val;
   }
+  return NULL;
 }
 
 /**
  * @brief Parses an expression.
  */
 void expression() {
-
-  literal();
+  if (match(TOKEN_MINUS)) {
+    advance();
+    Value* v = literal();
+    switch (v->type) {
+      case VAL_INTEGER_32: {
+        block_new_opcode(parser.block, OP_NEGATE_INTEGER_32);
+        break;
+      }
+      default: {
+        printf("Cannot negate value of type ");
+        value_type_print(v->type);
+        printf(" on line %d\n", parser.current->line);
+        exit(1);
+      }
+    }
+  } else {
+    literal();
+  }
 }

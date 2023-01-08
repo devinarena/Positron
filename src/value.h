@@ -25,6 +25,8 @@ typedef struct {
 Value* value_new_int_32(int data);
 // prints a value's data
 void value_print(Value* value);
+// prints the type of a value
+void value_type_print(enum ValueType value);
 // frees the memory allocated by a value
 void value_free(Value* value);
 

@@ -23,5 +23,7 @@ void interpreter_init();
 void interpret(Block* block);
 // Prints the interpreter.
 void interpreter_print(Block* block);
+// Frees the interpreter's memory.
+void interpreter_free();
 
 #endif

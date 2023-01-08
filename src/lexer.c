@@ -61,7 +61,7 @@ static void skip_whitespace() {
 
 /**
  * @brief Helper function for parsing a number token.
- * 
+ *
  * @return Token* the token representing the number (floating point or integer)
  */
 static Token* number() {
@@ -105,10 +105,18 @@ Token* lexer_next_token() {
   }
 
   switch (c) {
-    case '\0':
+    case '-': {
+      char* buffer = malloc(sizeof(char) * 2);
+      buffer[0] = '-';
+      buffer[1] = '\0';
+      lexer.index++;
+      return token_new(TOKEN_MINUS, buffer, lexer.line);
+    }
+    case '\0': {
       char* buffer = malloc(sizeof(char));
       buffer[0] = '\0';
       return token_new(TOKEN_EOF, buffer, lexer.line);
+    }
     default:
       printf("Unexpected character: %c", c);
       exit(1);

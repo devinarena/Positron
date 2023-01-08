@@ -38,6 +38,22 @@ void value_print(Value* value) {
 }
 
 /**
+ * @brief Prints the type of a value.
+ *
+ * @param value the value to print
+ */
+void value_type_print(enum ValueType type) {
+  switch (type) {
+    case VAL_INTEGER_32:
+      printf("i32");
+      break;
+    default:
+      printf("null");
+      break;
+  }
+}
+
+/**
  * @brief Frees the memory allocated by a value.
  */
 void value_free(Value* value) {

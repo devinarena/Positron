@@ -27,6 +27,8 @@ void dyn_list_add(dyn_list* list, void* data);
 void dyn_list_insert(dyn_list* list, size_t index, void* data);
 // removes an object at the specified index
 void dyn_list_remove(dyn_list* list, size_t index);
+// removes the last object in the list
+void dyn_list_pop(dyn_list* list);
 // removes all objects from the list
 void dyn_list_clear(dyn_list* list);
 // returns the object at the specified index

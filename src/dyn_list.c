@@ -6,8 +6,9 @@
 
 /**
  * @brief Creates a new dynamic list.
- * 
- * @param free_object the function to call when an object is removed from the list
+ *
+ * @param free_object the function to call when an object is removed from the
+ * list
  * @return dyn_list* a pointer to the newly allocated dynamic list
  */
 dyn_list* dyn_list_new(void (*free_object)(void*)) {
@@ -21,7 +22,7 @@ dyn_list* dyn_list_new(void (*free_object)(void*)) {
 
 /**
  * @brief Frees the memory allocated by a dynamic list.
- * 
+ *
  * @param list the dynamic list to free
  */
 void dyn_list_free(dyn_list* list) {
@@ -32,7 +33,7 @@ void dyn_list_free(dyn_list* list) {
 
 /**
  * @brief Adds an object to the end of the list.
- * 
+ *
  * @param list the list to add to
  * @param data the object to add
  */
@@ -46,7 +47,7 @@ void dyn_list_add(dyn_list* list, void* data) {
 
 /**
  * @brief inserts an object at the specified index.
- * 
+ *
  * @param list the list to insert into
  * @param index the index to insert at
  * @param data the object to insert
@@ -70,7 +71,7 @@ void dyn_list_insert(dyn_list* list, size_t index, void* data) {
 
 /**
  * @brief Removes an object at the specified index.
- * 
+ *
  * @param list the list to remove from
  * @param index the index to remove at
  */
@@ -87,8 +88,22 @@ void dyn_list_remove(dyn_list* list, size_t index) {
 }
 
 /**
+ * @brief Removes the last object from the list.
+ *
+ * @param list the list to remove from
+ */
+void dyn_list_pop(dyn_list* list) {
+  if (list->size == 0) {
+    return;
+  }
+  if (list->free_object)
+    (*list->free_object)(list->data[list->size - 1]);
+  list->size--;
+}
+
+/**
  * @brief Clears all objects from the list.
- * 
+ *
  * @param list the list to clear
  */
 void dyn_list_clear(dyn_list* list) {
@@ -102,7 +117,7 @@ void dyn_list_clear(dyn_list* list) {
 
 /**
  * @brief Returns the object at the specified index.
- * 
+ *
  * @param list the list to get from
  * @param index the index to get at
  * @return void* the object at the specified index
@@ -116,7 +131,7 @@ void* dyn_list_get(dyn_list* list, size_t index) {
 
 /**
  * @brief Sets the object at the specified index.
- * 
+ *
  * @param list the list to set in
  * @param index the index to set at
  * @param data the object to set
