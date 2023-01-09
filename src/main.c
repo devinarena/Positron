@@ -30,7 +30,7 @@ int main(int argc, const char* argv[]) {
   Block* block = block_new(name);
   parser_init(block);
   
-  statement();
+  parse();
 
   parser_free();
 

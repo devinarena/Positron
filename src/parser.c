@@ -100,6 +100,26 @@ void parser_free() {
 }
 
 /**
+ * @brief Parses a variable.
+ */
+static Value* variable() {
+  Token* token = parser.previous;
+  Value* val = hash_table_get(&parser.globals, token->lexeme);
+  if (val == NULL) {
+    printf("Undefined variable '%s' on line %d", token->lexeme, token->line);
+    exit(1);
+  }
+  
+  uint8_t index = block_new_constant(
+      parser.block,
+      value_new_object((PObject*)p_object_string_new(token->lexeme)));
+  
+  block_new_opcodes(parser.block, OP_CONSTANT, index);
+  block_new_opcode(parser.block, OP_GLOBAL_GET);
+  return val;
+}
+
+/**
  * @brief Parses a literal.
  */
 static Value* literal() {
@@ -113,6 +133,8 @@ static Value* literal() {
     uint8_t index = block_new_constant(parser.block, val);
     block_new_opcodes(parser.block, OP_CONSTANT, index);
     return val;
+  } else if (match(TOKEN_IDENTIFIER)) {
+    return variable();
   } else {
     // TODO: create a better error message
     printf("Expected literal but got token of type ");
@@ -251,16 +273,17 @@ void statement() {
     block_new_opcode(parser.block, OP_PRINT);
   } else if (match(TOKEN_I32)) {
     consume(TOKEN_IDENTIFIER);
-    
+
     const char* name = parser.previous->lexeme;
     PString* pstr = p_object_string_new(name);
-    uint8_t index = block_new_constant(parser.block, value_new_object((PObject*)pstr));
-    
+    uint8_t index =
+        block_new_constant(parser.block, value_new_object((PObject*)pstr));
+
     block_new_opcodes(parser.block, OP_CONSTANT, index);
     block_new_opcode(parser.block, OP_GLOBAL_DEFINE);
-    
+
     consume(TOKEN_EQUAL);
-    
+
     Value* val = expression();
     hash_table_set(&parser.globals, name, val);
 
@@ -270,4 +293,10 @@ void statement() {
     expression();
   }
   match(TOKEN_SEMICOLON);
+}
+
+void parse() {
+  while (!match(TOKEN_EOF)) {
+    statement();
+  }
 }

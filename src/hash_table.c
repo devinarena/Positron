@@ -142,6 +142,8 @@ bool hash_table_set(HashTable* table, const char* key, Value* value) {
     table->count++;
 
   entry->key = key;
+  if (entry->value != NULL)
+    value_free(entry->value);
   entry->value = value;
   return isNewKey;
 }
@@ -160,6 +162,10 @@ bool hash_table_delete(HashTable* table, const char* key) {
   Entry* entry = findEntry(table->entries, table->capacity, key);
   if (entry->key == NULL)
     return false;
+
+  if (entry->value != NULL) {
+    value_free(entry->value);
+  }
 
   entry->key = NULL;
   entry->value = value_new_null();  // tombstone
@@ -233,8 +239,8 @@ void hash_table_print(HashTable* table) {
     Entry* entry = &table->entries[i];
     if (entry->key) {
       printf("  {\n");
-      printf("  key: %p\n", entry->key);
-      printf("  value: ");
+      printf("  key (%p): %s\n", entry->key, entry->key);
+      printf("  value (%p): ", entry->value);
       if (entry->value)
         value_print(entry->value);
       else

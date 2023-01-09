@@ -24,6 +24,7 @@ typedef struct Parser {
 
 // initializes the parser with the given block
 void parser_init(Block* block);
+void parse();
 // frees the parser's memory
 void parser_free();
 

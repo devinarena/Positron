@@ -110,14 +110,21 @@ void interpret(Block* block) {
       }
       case OP_GLOBAL_DEFINE: {
         Value* name = pop_stack();
-        hash_table_set(&interpreter.globals, ((PString*)name->data.reference)->value, NULL);
+        hash_table_set(&interpreter.globals, TO_STRING(name)->value, NULL);
         interpreter.ip++;
         break;
       }
       case OP_GLOBAL_SET: {
         Value* name = pop_stack();
         Value* value = pop_stack();
-        hash_table_set(&interpreter.globals, ((PString*)name->data.reference)->value, value);
+        hash_table_set(&interpreter.globals, TO_STRING(name)->value, value);
+        interpreter.ip++;
+        break;
+      }
+      case OP_GLOBAL_GET: {
+        Value* name = pop_stack();
+        Value* value = hash_table_get(&interpreter.globals, TO_STRING(name)->value);
+        push_stack(value);
         interpreter.ip++;
         break;
       }

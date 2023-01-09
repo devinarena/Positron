@@ -9,6 +9,8 @@
 #ifndef POSITRON_OBJECT_H
 #define POSITRON_OBJECT_H
 
+#define TO_STRING(val) ((PString*)val->data.reference)
+
 #include <stdint.h>
 
 enum PObjectType {
