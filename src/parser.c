@@ -306,12 +306,32 @@ Value* expression() {
 }
 
 /**
+ * @brief Parses an if statement.
+ */
+static void statement_if() {
+  consume(TOKEN_LPAREN);
+  expression();
+  consume(TOKEN_RPAREN);
+
+  block_new_opcodes_3(parser.block, OP_CJUMPF, 0xFF, 0xFF);
+  size_t start = parser.block->opcodes->size - 2;
+  statement();
+  int jump = parser.block->opcodes->size - start - 1;
+  uint16_t size = jump < UINT16_MAX ? jump : UINT16_MAX;
+  (*(uint8_t*)parser.block->opcodes->data[start]) = (size >> 8) & 0xFF;
+  (*(uint8_t*)parser.block->opcodes->data[start + 1]) = size & 0xFF;
+  printf("jump: %d", size);
+}
+
+/**
  * @brief Parses a statement.
  */
 void statement() {
   if (match(TOKEN_PRINT)) {
     expression();
     block_new_opcode(parser.block, OP_PRINT);
+  } else if (match(TOKEN_IF)) {
+    statement_if();
   } else if (match(TOKEN_I32) || match(TOKEN_BOOL)) {
     enum ValueType type = VAL_NULL;
     if (parser.previous->type == TOKEN_I32) {

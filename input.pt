@@ -1,2 +1,3 @@
-bool test = true
-print test
+bool test = false
+if (test)
+    print test

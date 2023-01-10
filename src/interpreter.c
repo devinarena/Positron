@@ -55,6 +55,11 @@ void interpret(Block* block) {
         interpreter.ip++;
         break;
       }
+      case OP_POP: {
+        pop_stack();
+        interpreter.ip++;
+        break;
+      }
       case OP_PRINT: {
         Value* v = pop_stack();
         value_print(v);
@@ -126,6 +131,18 @@ void interpret(Block* block) {
         Value* value = hash_table_get(&interpreter.globals, TO_STRING(name)->value);
         push_stack(value_clone(value));
         interpreter.ip++;
+        break;
+      }
+      case OP_CJUMPF: {
+        Value* condition = pop_stack();
+        uint8_t high = *(uint8_t*)block->opcodes->data[++interpreter.ip];
+        uint8_t low = *(uint8_t*)block->opcodes->data[++interpreter.ip];
+        uint16_t offset = (high << 8) | low;
+        if (condition->data.boolean == false) {
+          interpreter.ip += offset;
+        } else {
+          interpreter.ip++;
+        }
         break;
       }
       default: {

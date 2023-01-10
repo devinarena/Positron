@@ -45,6 +45,7 @@ void token_print(Token* token) {
     case TOKEN_SEMICOLON:
     case TOKEN_BOOL:
     case TOKEN_I32:
+    case TOKEN_IF:
     case TOKEN_FALSE:
     case TOKEN_NULL:
     case TOKEN_PRINT:
@@ -81,6 +82,9 @@ void token_type_print(enum TokenType type) {
       break;
     case TOKEN_I32:
       printf("TOKEN_I32");
+      break;
+    case TOKEN_IF:
+      printf("TOKEN_IF");
       break;
     case TOKEN_NULL:
       printf("TOKEN_NULL");

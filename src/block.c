@@ -53,6 +53,31 @@ void block_new_opcodes(Block* block, uint8_t opcodeA, uint8_t opcodeB) {
 }
 
 /**
+ * @brief Adds three new opcodes to a block.
+ *
+ * @param block the block to add the opcodes to
+ * @param opcodeA the first opcode to add
+ * @param opcodeB the second opcode to add
+ * @param opcodeC the third opcode to add
+ */
+void block_new_opcodes_3(Block* block,
+                        uint8_t opcodeA,
+                        uint8_t opcodeB,
+                        uint8_t opcodeC) {
+  uint8_t* bytes = malloc(sizeof(uint8_t));
+  *bytes = opcodeA;
+  dyn_list_add(block->opcodes, (void*)bytes);
+
+  bytes = malloc(sizeof(uint8_t));
+  *bytes = opcodeB;
+  dyn_list_add(block->opcodes, (void*)bytes);
+
+  bytes = malloc(sizeof(uint8_t));
+  *bytes = opcodeC;
+  dyn_list_add(block->opcodes, (void*)bytes);
+}
+
+/**
  * @brief Adds a new constant to a block.
  *
  * @param block the block to add the constant to
@@ -107,18 +132,21 @@ size_t block_print_opcode(Block* block, size_t index) {
     case OP_NOP:
       printf("OP_NOP");
       return 1;
+    case OP_POP:
+      printf("OP_POP");
+      return 1;
     case OP_PRINT:
       printf("OP_PRINT");
       return 1;
     case OP_GLOBAL_DEFINE:
       printf("OP_GLOBAL_DEFINE");
-      return 2;
+      return 1;
     case OP_GLOBAL_SET:
       printf("OP_GLOBAL_SET");
-      return 2;
+      return 1;
     case OP_GLOBAL_GET:
       printf("OP_GLOBAL_GET");
-      return 2;
+      return 1;
     case OP_NEGATE_INTEGER_32:
       printf("OP_NEGATE_INTEGER_32");
       return 1;
@@ -135,9 +163,20 @@ size_t block_print_opcode(Block* block, size_t index) {
       printf("OP_DIVIDE_INTEGER_32");
       return 1;
     case OP_CONSTANT:
-      printf("OP_CONSTANT [%d]",
-             *(uint8_t*)block->opcodes->data[index + 1]);
+      printf("OP_CONSTANT [%d]", *(uint8_t*)block->opcodes->data[index + 1]);
       return 2;
+    case OP_CJUMPF: {
+      uint16_t addr = *(uint8_t*)block->opcodes->data[index + 1] << 8 |
+                      *(uint8_t*)block->opcodes->data[index + 2];
+      printf("OP_CJUMPF [%d]", addr);
+      return 3;
+    }
+    case OP_JUMP: {
+      uint16_t addr = *(uint8_t*)block->opcodes->data[index + 1] << 8 |
+                      *(uint8_t*)block->opcodes->data[index + 2];
+      printf("OP_JUMP [%d]", addr);
+      return 3;
+    }
     default:
       printf("Unknown opcode: %d", *opcode);
       return 1;

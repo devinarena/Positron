@@ -104,8 +104,10 @@ static Token* identifier() {
     return token_new(TOKEN_BOOL, buffer, lexer.line);
   } else if (strcmp(buffer, "false") == 0) {
     return token_new(TOKEN_FALSE, buffer, lexer.line);
-  }else if (strcmp(buffer, "i32") == 0) {
+  } else if (strcmp(buffer, "i32") == 0) {
     return token_new(TOKEN_I32, buffer, lexer.line);
+  } else if (strcmp(buffer, "if") == 0) {
+    return token_new(TOKEN_IF, buffer, lexer.line);
   } else if (strcmp(buffer, "null") == 0) {
     return token_new(TOKEN_NULL, buffer, lexer.line);
   } else if (strcmp(buffer, "print") == 0) {
