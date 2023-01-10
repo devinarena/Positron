@@ -83,8 +83,7 @@ static void consume(enum TokenType type) {
  * @param message The error message to print.
  */
 void parse_error(const char* format, ...) {
-  printf("[line %d] at '%s': ", parser.previous->line,
-         parser.previous->lexeme);
+  printf("[line %d] at '%s': ", parser.previous->line, parser.previous->lexeme);
   va_list args;
   va_start(args, format);
   vprintf(format, args);
@@ -166,6 +165,16 @@ static Value* literal() {
     return val;
   } else if (match(TOKEN_NULL)) {
     Value* val = value_new_null();
+    uint8_t index = block_new_constant(parser.block, val);
+    block_new_opcodes(parser.block, OP_CONSTANT, index);
+    return val;
+  } else if (match(TOKEN_TRUE)) {
+    Value* val = value_new_boolean(true);
+    uint8_t index = block_new_constant(parser.block, val);
+    block_new_opcodes(parser.block, OP_CONSTANT, index);
+    return val;
+  } else if (match(TOKEN_FALSE)) {
+    Value* val = value_new_boolean(false);
     uint8_t index = block_new_constant(parser.block, val);
     block_new_opcodes(parser.block, OP_CONSTANT, index);
     return val;
@@ -303,7 +312,14 @@ void statement() {
   if (match(TOKEN_PRINT)) {
     expression();
     block_new_opcode(parser.block, OP_PRINT);
-  } else if (match(TOKEN_I32)) {
+  } else if (match(TOKEN_I32) || match(TOKEN_BOOL)) {
+    enum ValueType type = VAL_NULL;
+    if (parser.previous->type == TOKEN_I32) {
+      type = VAL_INTEGER_32;
+    } else if (parser.previous->type == TOKEN_BOOL) {
+      type = VAL_BOOL;
+    }
+
     consume(TOKEN_IDENTIFIER);
 
     const char* name = parser.previous->lexeme;

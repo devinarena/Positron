@@ -100,12 +100,18 @@ static Token* identifier() {
   memcpy(buffer, &lexer.input[start], length);
   buffer[length] = '\0';
 
-  if (strcmp(buffer, "print") == 0) {
-    return token_new(TOKEN_PRINT, buffer, lexer.line);
+  if (strcmp(buffer, "bool") == 0) {
+    return token_new(TOKEN_BOOL, buffer, lexer.line);
+  } else if (strcmp(buffer, "false") == 0) {
+    return token_new(TOKEN_FALSE, buffer, lexer.line);
+  }else if (strcmp(buffer, "i32") == 0) {
+    return token_new(TOKEN_I32, buffer, lexer.line);
   } else if (strcmp(buffer, "null") == 0) {
     return token_new(TOKEN_NULL, buffer, lexer.line);
-  } else if (strcmp(buffer, "i32") == 0) {
-    return token_new(TOKEN_I32, buffer, lexer.line);
+  } else if (strcmp(buffer, "print") == 0) {
+    return token_new(TOKEN_PRINT, buffer, lexer.line);
+  } else if (strcmp(buffer, "true") == 0) {
+    return token_new(TOKEN_TRUE, buffer, lexer.line);
   }
 
   return token_new(TOKEN_IDENTIFIER, buffer, lexer.line);

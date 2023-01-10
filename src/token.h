@@ -17,9 +17,12 @@ enum TokenType {
   TOKEN_LITERAL_FLOATING,
   
   // keywords
+  TOKEN_BOOL,
+  TOKEN_FALSE,
   TOKEN_I32,
   TOKEN_NULL,
   TOKEN_PRINT,
+  TOKEN_TRUE,
 
   TOKEN_IDENTIFIER,
 
