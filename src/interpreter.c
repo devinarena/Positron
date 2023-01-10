@@ -124,7 +124,7 @@ void interpret(Block* block) {
       case OP_GLOBAL_GET: {
         Value* name = pop_stack();
         Value* value = hash_table_get(&interpreter.globals, TO_STRING(name)->value);
-        push_stack(value);
+        push_stack(value_clone(value));
         interpreter.ip++;
         break;
       }

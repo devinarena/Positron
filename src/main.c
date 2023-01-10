@@ -11,10 +11,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "memory.h"
-#include "lexer.h"
-#include "parser.h"
 #include "interpreter.h"
+#include "lexer.h"
+#include "memory.h"
+#include "parser.h"
 
 int main(int argc, const char* argv[]) {
   if (argc != 2) {
@@ -29,20 +29,20 @@ int main(int argc, const char* argv[]) {
   lexer_init(source);
   Block* block = block_new(name);
   parser_init(block);
-  
-  parse();
+
+  if (parse()) {
+#ifdef POSITRON_DEBUG
+    block_print(block);
+#endif
+
+    interpreter_init();
+
+    interpret(block);
+
+    interpreter_free();
+  }
 
   parser_free();
-
-#ifdef POSITRON_DEBUG
-  block_print(block);
-#endif
-  
-  interpreter_init();
-
-  interpret(block);
-
-  interpreter_free();
   block_free(block);
   free((void*)source);
 

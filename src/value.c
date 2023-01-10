@@ -44,6 +44,13 @@ Value* value_new_object(PObject* object) {
   return value;
 }
 
+Value* value_clone(Value* value) {
+  Value* clone = malloc(sizeof(Value));
+  clone->type = value->type;
+  clone->data = value->data;
+  return clone;
+}
+
 /**
  * @brief Prints a value's data.
  *

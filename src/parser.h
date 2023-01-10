@@ -20,11 +20,14 @@ typedef struct Parser {
     Token* previous;
     Block* block;
     HashTable globals;
+    bool had_error;
 } Parser;
 
 // initializes the parser with the given block
 void parser_init(Block* block);
-void parse();
+// produces a parse error and triggers synchronization
+void parse_error(const char* format, ...);
+bool parse();
 // frees the parser's memory
 void parser_free();
 

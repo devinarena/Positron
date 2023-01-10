@@ -6,8 +6,10 @@
  * @since 1/6/2023
  **/
 
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "lexer.h"
 #include "parser.h"
@@ -70,12 +72,24 @@ static void consume(enum TokenType type) {
     return;
   }
   // TODO: create a better error message
-  printf("Expected token of type ");
-  token_type_print(type);
-  printf(" but got token of type ");
+  parse_error("Unexpected token ");
   token_type_print(parser.current->type);
-  printf(" on line %d\n", parser.current->line);
-  exit(1);
+  printf("\n");
+}
+
+/**
+ * @brief Produces a parse error and triggers synchronization.
+ *
+ * @param message The error message to print.
+ */
+void parse_error(const char* format, ...) {
+  printf("[line %d] at '%s': ", parser.previous->line,
+         parser.previous->lexeme);
+  va_list args;
+  va_start(args, format);
+  vprintf(format, args);
+  va_end(args);
+  parser.had_error = true;
 }
 
 /**
@@ -100,6 +114,28 @@ void parser_free() {
 }
 
 /**
+ * @brief Syncs the parser to the next statement.
+ */
+static void synchronize() {
+  // break on a statement end (semicolon) or begin
+  while (parser.current->type != TOKEN_EOF) {
+    if (parser.previous->type == TOKEN_SEMICOLON) {
+      return;
+    }
+
+    switch (parser.current->type) {
+      case TOKEN_PRINT:
+      case TOKEN_I32:
+        return;
+      default:
+        break;
+    }
+
+    advance();
+  }
+}
+
+/**
  * @brief Parses a variable.
  */
 static Value* variable() {
@@ -109,11 +145,11 @@ static Value* variable() {
     printf("Undefined variable '%s' on line %d", token->lexeme, token->line);
     exit(1);
   }
-  
+
   uint8_t index = block_new_constant(
       parser.block,
       value_new_object((PObject*)p_object_string_new(token->lexeme)));
-  
+
   block_new_opcodes(parser.block, OP_CONSTANT, index);
   block_new_opcode(parser.block, OP_GLOBAL_GET);
   return val;
@@ -137,10 +173,9 @@ static Value* literal() {
     return variable();
   } else {
     // TODO: create a better error message
-    printf("Expected literal but got token of type ");
+    parse_error("Expected literal but got token of type ");
     token_type_print(parser.current->type);
-    printf(" on line %d\n", parser.current->line);
-    exit(1);
+    printf("\n");
   }
   return NULL;
 }
@@ -179,24 +214,22 @@ static Value* term() {
         block_new_opcode(parser.block, OP_MULTIPLY_INTEGER_32);
       } else {
         // TODO: create a better error message
-        printf("Cannot multiply values of type ");
+        parse_error("Cannot multiply values of type ");
         value_type_print(val->type);
         printf(" and ");
         value_type_print(rhs->type);
-        printf(" on line %d\n", parser.current->line);
-        exit(1);
+        printf("\n");
       }
     } else if (op == TOKEN_SLASH) {
       if (val->type == VAL_INTEGER_32 && rhs->type == VAL_INTEGER_32) {
         block_new_opcode(parser.block, OP_DIVIDE_INTEGER_32);
       } else {
         // TODO: create a better error message
-        printf("Cannot divide values of type ");
+        parse_error("Cannot divide values of type ");
         value_type_print(val->type);
         printf(" and ");
         value_type_print(rhs->type);
-        printf(" on line %d\n", parser.current->line);
-        exit(1);
+        printf("\n");
       }
     }
     val = rhs;
@@ -240,22 +273,21 @@ Value* expression() {
         block_new_opcode(parser.block, OP_ADD_INTEGER_32);
       } else {
         // TODO: create a better error message
-        printf("Cannot add values of type ");
+        parse_error("Cannot add values of type ");
         value_type_print(val->type);
         printf(" and ");
         value_type_print(rhs->type);
-        printf(" on line %d\n", parser.current->line);
       }
     } else if (op == TOKEN_MINUS) {
       if (val->type == VAL_INTEGER_32 && rhs->type == VAL_INTEGER_32) {
         block_new_opcode(parser.block, OP_SUBTRACT_INTEGER_32);
       } else {
         // TODO: create a better error message
-        printf("Cannot subtract values of type ");
+        parse_error("Cannot subtract values of type ");
         value_type_print(val->type);
         printf(" and ");
         value_type_print(rhs->type);
-        printf(" on line %d\n", parser.current->line);
+        printf("\n");
       }
     }
     val = rhs;
@@ -293,10 +325,16 @@ void statement() {
     expression();
   }
   match(TOKEN_SEMICOLON);
+
+  if (parser.had_error) {
+    synchronize();
+  }
 }
 
-void parse() {
+bool parse() {
   while (!match(TOKEN_EOF)) {
     statement();
   }
+
+  return !parser.had_error;
 }

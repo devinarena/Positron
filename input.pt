@@ -1,2 +1,4 @@
 i32 x = (5 - 3) * 2 * 9
-print x
+i32 y = 4
+i32 z = x + y
+print z * x

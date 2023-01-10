@@ -14,6 +14,9 @@
 
 #include "object.h"
 
+#define PNULL() \
+  (Value) { .type = VAL_NULL, .data.integer_32 = 0 }
+
 enum ValueType { VAL_NULL, VAL_INTEGER_32, VAL_OBJ };
 
 typedef struct {
@@ -30,6 +33,8 @@ Value* value_new_null();
 Value* value_new_int_32(int data);
 // allocates a new object value and returns a pointer to it
 Value* value_new_object(PObject* object);
+
+Value* value_clone(Value* value);
 
 // prints a value's data
 void value_print(Value* value);

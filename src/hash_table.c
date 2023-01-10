@@ -95,6 +95,9 @@ static void adjustCapacity(HashTable* table, int capacity) {
     table->count++;
   }
 
+  for (int i = 0; i < table->capacity; i++)
+    value_free(table->entries[i].value);
+
   free(table->entries);
 
   table->entries = entries;
