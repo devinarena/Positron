@@ -28,6 +28,7 @@ enum TokenType {
   TOKEN_IDENTIFIER,
 
   // single character tokens
+  TOKEN_EXCLAMATION,
   TOKEN_PLUS,
   TOKEN_MINUS,
   TOKEN_STAR,
@@ -35,6 +36,9 @@ enum TokenType {
   TOKEN_EQUAL,
   TOKEN_LPAREN,
   TOKEN_RPAREN,
+  TOKEN_LBRACE,
+  TOKEN_RBRACE,
+
   // Thinking semi-colons will be optional for now
   TOKEN_SEMICOLON,
   TOKEN_EOF

@@ -153,27 +153,26 @@ Token* lexer_next_token() {
   }
 
   switch (c) {
-    case '+': {
+    case '!':
+      return single_char_token(TOKEN_EXCLAMATION, c);
+    case '+':
       return single_char_token(TOKEN_PLUS, c);
-    }
-    case '-': {
+    case '-':
       return single_char_token(TOKEN_MINUS, c);
-    }
-    case '*': {
+    case '*':
       return single_char_token(TOKEN_STAR, c);
-    }
-    case '/': {
+    case '/':
       return single_char_token(TOKEN_SLASH, c);
-    }
-    case '=': {
+    case '=':
       return single_char_token(TOKEN_EQUAL, c);
-    }
-    case '(': {
+    case '(':
       return single_char_token(TOKEN_LPAREN, c);
-    }
-    case ')': {
+    case ')':
       return single_char_token(TOKEN_RPAREN, c);
-    }
+    case '{':
+      return single_char_token(TOKEN_LBRACE, c);
+    case '}':
+      return single_char_token(TOKEN_RBRACE, c);
     case ';': {
       return single_char_token(TOKEN_SEMICOLON, c);
     }

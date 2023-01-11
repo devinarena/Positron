@@ -1,3 +1,6 @@
 bool test = false
-if (test)
+
+if (!test) {
     print test
+    print 123
+}

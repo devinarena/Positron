@@ -106,6 +106,14 @@ void interpret(Block* block) {
         interpreter.ip++;
         break;
       }
+      case OP_NOT: {
+        Value* v = pop_stack();
+        Value* nv = value_new_boolean(!value_is_truthy(v));
+        value_free(v);
+        push_stack(nv);
+        interpreter.ip++;
+        break;
+      }
       case OP_CONSTANT: {
         uint8_t index = *(uint8_t*)block->opcodes->data[++interpreter.ip];
         Value* constant = block->constants->data[index];

@@ -141,8 +141,8 @@ static Value* variable() {
   Token* token = parser.previous;
   Value* val = hash_table_get(&parser.globals, token->lexeme);
   if (val == NULL) {
-    printf("Undefined variable '%s' on line %d", token->lexeme, token->line);
-    exit(1);
+    parse_error("Undefined variable '%s'\n", token->lexeme);
+    return value_new_null();
   }
 
   uint8_t index = block_new_constant(
@@ -253,9 +253,30 @@ static Value* term() {
 static Value* unary() {
   Value* val = NULL;
   enum TokenType prev = parser.previous->type;
-  if (prev == TOKEN_MINUS) {
-    val = literal();
-    block_new_opcode(parser.block, OP_NEGATE_INTEGER_32);
+  val = literal();
+  switch (prev) {
+    case TOKEN_MINUS: {
+      if (val->type == VAL_INTEGER_32) {
+        block_new_opcode(parser.block, OP_NEGATE_INTEGER_32);
+      } else {
+        parse_error("Cannot negate value of type ");
+        value_type_print(val->type);
+      }
+      break;
+    }
+    case TOKEN_EXCLAMATION: {
+      if (val->type == VAL_BOOL) {
+        block_new_opcode(parser.block, OP_NOT);
+      } else {
+        parse_error("Cannot negate value of type ");
+        value_type_print(val->type);
+      }
+      break;
+    }
+    default: {
+      parse_error("Invalid unary operator");
+      break;
+    }
   }
   return val;
 }
@@ -267,7 +288,7 @@ Value* expression() {
   Value* val = NULL;
   // TODO: clean this up
   // prefix operators
-  if (match(TOKEN_MINUS)) {
+  if (match(TOKEN_MINUS) || match(TOKEN_EXCLAMATION)) {
     val = unary();
   } else {
     val = term();
@@ -286,6 +307,7 @@ Value* expression() {
         value_type_print(val->type);
         printf(" and ");
         value_type_print(rhs->type);
+        printf("\n");
       }
     } else if (op == TOKEN_MINUS) {
       if (val->type == VAL_INTEGER_32 && rhs->type == VAL_INTEGER_32) {
@@ -320,7 +342,46 @@ static void statement_if() {
   uint16_t size = jump < UINT16_MAX ? jump : UINT16_MAX;
   (*(uint8_t*)parser.block->opcodes->data[start]) = (size >> 8) & 0xFF;
   (*(uint8_t*)parser.block->opcodes->data[start + 1]) = size & 0xFF;
-  printf("jump: %d", size);
+}
+
+/**
+ * @brief Parses a declaration.
+ */
+static void declaration_statement() {
+  enum ValueType type = VAL_NULL;
+  if (parser.previous->type == TOKEN_I32) {
+    type = VAL_INTEGER_32;
+  } else if (parser.previous->type == TOKEN_BOOL) {
+    type = VAL_BOOL;
+  }
+
+  consume(TOKEN_IDENTIFIER);
+
+  const char* name = parser.previous->lexeme;
+  PString* pstr = p_object_string_new(name);
+  uint8_t index =
+      block_new_constant(parser.block, value_new_object((PObject*)pstr));
+
+  block_new_opcodes(parser.block, OP_CONSTANT, index);
+  block_new_opcode(parser.block, OP_GLOBAL_DEFINE);
+
+  consume(TOKEN_EQUAL);
+
+  Value* val = expression();
+  hash_table_set(&parser.globals, name, val);
+
+  block_new_opcodes(parser.block, OP_CONSTANT, index);
+  block_new_opcode(parser.block, OP_GLOBAL_SET);
+}
+
+/**
+ * @brief Parses a block.
+ *
+ */
+static void block() {
+  while (!match(TOKEN_RBRACE)) {
+    statement();
+  }
 }
 
 /**
@@ -333,30 +394,9 @@ void statement() {
   } else if (match(TOKEN_IF)) {
     statement_if();
   } else if (match(TOKEN_I32) || match(TOKEN_BOOL)) {
-    enum ValueType type = VAL_NULL;
-    if (parser.previous->type == TOKEN_I32) {
-      type = VAL_INTEGER_32;
-    } else if (parser.previous->type == TOKEN_BOOL) {
-      type = VAL_BOOL;
-    }
-
-    consume(TOKEN_IDENTIFIER);
-
-    const char* name = parser.previous->lexeme;
-    PString* pstr = p_object_string_new(name);
-    uint8_t index =
-        block_new_constant(parser.block, value_new_object((PObject*)pstr));
-
-    block_new_opcodes(parser.block, OP_CONSTANT, index);
-    block_new_opcode(parser.block, OP_GLOBAL_DEFINE);
-
-    consume(TOKEN_EQUAL);
-
-    Value* val = expression();
-    hash_table_set(&parser.globals, name, val);
-
-    block_new_opcodes(parser.block, OP_CONSTANT, index);
-    block_new_opcode(parser.block, OP_GLOBAL_SET);
+    declaration_statement();
+  } else if (match(TOKEN_LBRACE)) {
+    block();
   } else {
     expression();
   }

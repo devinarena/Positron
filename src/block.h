@@ -30,6 +30,7 @@ enum OpCode {
     OP_MULTIPLY_INTEGER_32,
     OP_DIVIDE_INTEGER_32,
     OP_NEGATE_INTEGER_32,
+    OP_NOT,
 
     OP_CJUMPF,
 
