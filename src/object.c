@@ -65,12 +65,13 @@ void p_object_print(PObject* object) {
  */
 void object_free(PObject* object) {
   switch (object->type) {
-    case P_OBJ_STRING:
+    case P_OBJ_STRING: {
       PString* string = (PString*)object;
       free(string->value);
-      free(object);
       break;
+    }
     default:
       break;
   }
+  free(object);
 }

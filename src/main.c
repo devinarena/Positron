@@ -23,8 +23,10 @@ int main(int argc, const char* argv[]) {
   }
 
   const char* source = read_file(argv[1]);
-  char* name = malloc(strlen(argv[1]));
+  size_t len = strlen(argv[1]);
+  char* name = malloc(len + 1);
   strcpy(name, argv[1]);
+  name[len] = '\0';
 
   lexer_init(source);
   Block* block = block_new(name);
