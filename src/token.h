@@ -36,10 +36,14 @@ enum TokenType {
   TOKEN_RPAREN,
   TOKEN_LBRACE,
   TOKEN_RBRACE,
+  TOKEN_GREATER,
+  TOKEN_LESS,
 
   // double character tokens
   TOKEN_EQUAL_EQUAL,
   TOKEN_NOT_EQUAL,
+  TOKEN_GREATER_EQUAL,
+  TOKEN_LESS_EQUAL,
 
   // Thinking semi-colons will be optional for now
   TOKEN_SEMICOLON,

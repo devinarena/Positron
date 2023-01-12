@@ -189,6 +189,20 @@ Token* lexer_next_token() {
     case ';': {
       return single_char_token(TOKEN_SEMICOLON, c);
     }
+    case '>': {
+      if (peek_next() == '=') {
+        lexer.index += 2;
+        return make_token(TOKEN_GREATER_EQUAL, ">=", 2);
+      }
+      return single_char_token(TOKEN_GREATER, c);
+    }
+    case '<': {
+      if (peek_next() == '=') {
+        lexer.index += 2;
+        return make_token(TOKEN_LESS_EQUAL, "<=", 2);
+      }
+      return single_char_token(TOKEN_LESS, c);
+    }
     case '\0': {
       char* buffer = malloc(sizeof(char));
       buffer[0] = '\0';

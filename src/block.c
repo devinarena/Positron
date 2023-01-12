@@ -61,9 +61,9 @@ void block_new_opcodes(Block* block, uint8_t opcodeA, uint8_t opcodeB) {
  * @param opcodeC the third opcode to add
  */
 void block_new_opcodes_3(Block* block,
-                        uint8_t opcodeA,
-                        uint8_t opcodeB,
-                        uint8_t opcodeC) {
+                         uint8_t opcodeA,
+                         uint8_t opcodeB,
+                         uint8_t opcodeC) {
   uint8_t* bytes = malloc(sizeof(uint8_t));
   *bytes = opcodeA;
   dyn_list_add(block->opcodes, (void*)bytes);
@@ -162,6 +162,25 @@ size_t block_print_opcode(Block* block, size_t index) {
     case OP_DIVIDE_INTEGER_32:
       printf("OP_DIVIDE_INTEGER_32");
       return 1;
+    case OP_COMPARE_INTEGER_32:
+      printf("OP_COMPARE_INTEGER_32");
+      return 1;
+    case OP_GREATER_INTEGER_32: {
+      printf("OP_GREATER_INTEGER_32");
+      return 1;
+    }
+    case OP_LESS_INTEGER_32: {
+      printf("OP_LESS_INTEGER_32");
+      return 1;
+    }
+    case OP_GREATER_EQUAL_INTEGER_32: {
+      printf("OP_GREATER_EQUAL_INTEGER_32");
+      return 1;
+    }
+    case OP_LESS_EQUAL_INTEGER_32: {
+      printf("OP_LESS_EQUAL_INTEGER_32");
+      return 1;
+    }
     case OP_NOT:
       printf("OP_NOT");
       return 1;

@@ -215,7 +215,9 @@ static Value primary() {
  * @return Value the result of the condition
  */
 static Value condition(Value* lhs) {
-  if (!match(TOKEN_EQUAL_EQUAL) && !match(TOKEN_NOT_EQUAL)) {
+  if (!match(TOKEN_EQUAL_EQUAL) && !match(TOKEN_NOT_EQUAL) &&
+      !match(TOKEN_GREATER) && !match(TOKEN_GREATER_EQUAL) &&
+      !match(TOKEN_LESS) && !match(TOKEN_LESS_EQUAL)) {
     parse_error("Expected condition operator but got token of type ");
     token_type_print(parser.current->type);
     return value_new_null();
@@ -223,7 +225,16 @@ static Value condition(Value* lhs) {
   enum TokenType op = parser.previous->type;
   Value rhs = expression();
   if (lhs->type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
-    block_new_opcode(parser.block, OP_COMPARE_INTEGER_32);
+    if (op == TOKEN_EQUAL_EQUAL)
+      block_new_opcode(parser.block, OP_COMPARE_INTEGER_32);
+    else if (op == TOKEN_GREATER)
+      block_new_opcode(parser.block, OP_GREATER_INTEGER_32);
+    else if (op == TOKEN_LESS)
+      block_new_opcode(parser.block, OP_LESS_INTEGER_32);
+    else if (op == TOKEN_GREATER_EQUAL)
+      block_new_opcode(parser.block, OP_GREATER_EQUAL_INTEGER_32);
+    else if (op == TOKEN_LESS_EQUAL)
+      block_new_opcode(parser.block, OP_LESS_EQUAL_INTEGER_32);
   } else {
     parse_error("Cannot compare values of type ");
     value_type_print(lhs->type);
@@ -379,7 +390,9 @@ static Value expression() {
   while (match(TOKEN_PLUS) || match(TOKEN_MINUS)) {
     val = term(&val);
   }
-  while (check(TOKEN_EQUAL_EQUAL) || check(TOKEN_NOT_EQUAL)) {
+  while (check(TOKEN_EQUAL_EQUAL) || check(TOKEN_NOT_EQUAL) ||
+         check(TOKEN_GREATER) || check(TOKEN_GREATER_EQUAL) ||
+         check(TOKEN_LESS) || check(TOKEN_LESS_EQUAL)) {
     val = condition(&val);
   }
 

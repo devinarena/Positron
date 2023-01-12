@@ -110,6 +110,34 @@ void interpret(Block* block) {
         interpreter.ip++;
         break;
       }
+      case OP_GREATER_INTEGER_32: {
+        Value* v2 = pop_stack();
+        Value* v1 = pop_stack();
+        push_stack(&value_new_boolean(v1->data.integer_32 > v2->data.integer_32));
+        interpreter.ip++;
+        break;
+      }
+      case OP_LESS_INTEGER_32: {
+        Value* v2 = pop_stack();
+        Value* v1 = pop_stack();
+        push_stack(&value_new_boolean(v1->data.integer_32 < v2->data.integer_32));
+        interpreter.ip++;
+        break;
+      }
+      case OP_GREATER_EQUAL_INTEGER_32: {
+        Value* v2 = pop_stack();
+        Value* v1 = pop_stack();
+        push_stack(&value_new_boolean(v1->data.integer_32 >= v2->data.integer_32));
+        interpreter.ip++;
+        break;
+      }
+      case OP_LESS_EQUAL_INTEGER_32: {
+        Value* v2 = pop_stack();
+        Value* v1 = pop_stack();
+        push_stack(&value_new_boolean(v1->data.integer_32 <= v2->data.integer_32));
+        interpreter.ip++;
+        break;
+      }
       case OP_NOT: {
         Value* v = pop_stack();
         bool data = !value_is_truthy(v);
