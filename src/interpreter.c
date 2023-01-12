@@ -138,6 +138,13 @@ void interpret(Block* block) {
         interpreter.ip++;
         break;
       }
+      case OP_COMPARE_BOOLEAN: {
+        Value* v2 = pop_stack();
+        Value* v1 = pop_stack();
+        push_stack(&value_new_boolean(v1->data.boolean == v2->data.boolean));
+        interpreter.ip++;
+        break;
+      }
       case OP_NOT: {
         Value* v = pop_stack();
         bool data = !value_is_truthy(v);

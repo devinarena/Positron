@@ -235,6 +235,12 @@ static Value condition(Value* lhs) {
       block_new_opcode(parser.block, OP_GREATER_EQUAL_INTEGER_32);
     else if (op == TOKEN_LESS_EQUAL)
       block_new_opcode(parser.block, OP_LESS_EQUAL_INTEGER_32);
+  } else if (lhs->type == VAL_BOOL && rhs.type == VAL_BOOL) {
+    if (op == TOKEN_EQUAL_EQUAL)
+      block_new_opcode(parser.block, OP_COMPARE_BOOLEAN);
+    else {
+      parse_error("Invalid operator for boolean comparison");
+    }
   } else {
     parse_error("Cannot compare values of type ");
     value_type_print(lhs->type);

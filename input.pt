@@ -1,4 +1,4 @@
-i32 x = 0
+bool test = false
 
-if (x <= -1)
-    print x
+if (!test == true)
+    print test
