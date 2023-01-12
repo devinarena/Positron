@@ -9,8 +9,6 @@
 #ifndef POSITRON_TOKEN_H
 #define POSITRON_TOKEN_H
 
-#define IS_NUM(c) (c - '0' >= 0 && c - '0' <= 9)
-
 enum TokenType {
   // literals
   TOKEN_LITERAL_INTEGER,
@@ -38,6 +36,10 @@ enum TokenType {
   TOKEN_RPAREN,
   TOKEN_LBRACE,
   TOKEN_RBRACE,
+
+  // double character tokens
+  TOKEN_EQUAL_EQUAL,
+  TOKEN_NOT_EQUAL,
 
   // Thinking semi-colons will be optional for now
   TOKEN_SEMICOLON,

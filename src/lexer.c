@@ -120,19 +120,22 @@ static Token* identifier() {
 }
 
 /**
- * @brief Helper for generating single character tokens (need to allocate a
- * string)
+ * @brief Helper for generating tokens from the given string.
  *
  * @param type the type of token to generate
  * @param c the character to generate the token from
  * @return Token* the token generated
  */
-static Token* single_char_token(enum TokenType type, char c) {
-  char* buffer = malloc(sizeof(char) * 2);
-  buffer[0] = c;
-  buffer[1] = '\0';
-  lexer.index++;
+static Token* make_token(enum TokenType type, const char* str, int length) {
+  char* buffer = malloc(sizeof(char) * (length + 1));
+  strcpy(buffer, str);
+  buffer[length] = '\0';
   return token_new(type, buffer, lexer.line);
+}
+
+static Token* single_char_token(enum TokenType type, char c) {
+  lexer.index++;
+  return make_token(type, &c, 1);
 }
 
 /**
@@ -153,8 +156,13 @@ Token* lexer_next_token() {
   }
 
   switch (c) {
-    case '!':
+    case '!': {
+      if (peek_next() == '=') {
+        lexer.index += 2;
+        return make_token(TOKEN_NOT_EQUAL, "!=", 2);
+      }
       return single_char_token(TOKEN_EXCLAMATION, c);
+    }
     case '+':
       return single_char_token(TOKEN_PLUS, c);
     case '-':
@@ -163,8 +171,13 @@ Token* lexer_next_token() {
       return single_char_token(TOKEN_STAR, c);
     case '/':
       return single_char_token(TOKEN_SLASH, c);
-    case '=':
+    case '=': {
+      if (peek_next() == '=') {
+        lexer.index += 2;
+        return make_token(TOKEN_EQUAL_EQUAL, "==", 2);
+      }
       return single_char_token(TOKEN_EQUAL, c);
+    }
     case '(':
       return single_char_token(TOKEN_LPAREN, c);
     case ')':

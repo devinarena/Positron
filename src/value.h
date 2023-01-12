@@ -44,32 +44,29 @@ void value_free(Value* value);
 /////////////////////////////
 
 /**
- * @brief Allocates and returns a new 32-bit integer value.
+ * @brief Returns a new 32-bit integer value.
  *
  * @param data the data to store in the value
- * @return Value* a pointer to the newly allocated value
  */
 #define value_new_int_32(val) \
   ((Value){.type = VAL_INTEGER_32, .data.integer_32 = (val)})
 
 /**
- * @brief Allocates and returns a new null value.
- *
- * @return Value* a pointer to the newly allocated value
+ * @brief Returns a new null value.
  */
 #define value_new_null() ((Value){.type = VAL_NULL, .data.integer_32 = 0})
 
 /**
- * @brief Allocates a new object value and returns a pointer to it.
+ * @brief Returns a new object value.
  *
+ * @param val a pointer to the object
  */
 #define value_new_object(val) ((Value){.type = VAL_OBJ, .data.reference = val})
 
 /**
- * @brief Allocates a new boolean value and returns a pointer to it.
+ * @brief Returns a new boolean value.
  *
  * @param data the data to store in the value
- * @return Value* a pointer to the newly allocated value
  */
 #define value_new_boolean(val) \
   ((Value){.type = VAL_BOOL, .data.boolean = (val)})

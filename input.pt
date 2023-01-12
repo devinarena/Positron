@@ -1,8 +1,5 @@
-bool test = true
+i32 x = 0
 
-test = false
-test = true
-
-if (test) {
-    print test
+if (x + 1 != 1) {
+    print x
 }

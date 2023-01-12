@@ -33,27 +33,7 @@ Token* token_new(enum TokenType type, const char* lexeme, int line) {
  */
 void token_print(Token* token) {
   switch (token->type) {
-    case TOKEN_LITERAL_FLOATING:
-    case TOKEN_LITERAL_INTEGER:
-    case TOKEN_EXCLAMATION:
-    case TOKEN_PLUS:
-    case TOKEN_MINUS:
-    case TOKEN_STAR:
-    case TOKEN_SLASH:
-    case TOKEN_EQUAL:
-    case TOKEN_LPAREN:
-    case TOKEN_RPAREN:
-    case TOKEN_LBRACE:
-    case TOKEN_RBRACE:
-    case TOKEN_SEMICOLON:
-    case TOKEN_BOOL:
-    case TOKEN_I32:
-    case TOKEN_IF:
-    case TOKEN_FALSE:
-    case TOKEN_NULL:
-    case TOKEN_PRINT:
-    case TOKEN_TRUE:
-    case TOKEN_IDENTIFIER:
+    default:
       printf("Token(");
       token_type_print(token->type);
       printf(", %s, %d)\n", token->lexeme, token->line);
@@ -136,6 +116,12 @@ void token_type_print(enum TokenType type) {
       break;
     case TOKEN_EOF:
       printf("TOKEN_EOF");
+      break;
+    case TOKEN_EQUAL_EQUAL:
+      printf("TOKEN_EQUAL_EQUAL");
+      break;
+    case TOKEN_NOT_EQUAL:
+      printf("TOKEN_NOT_EQUAL");
       break;
   }
 }

@@ -194,12 +194,12 @@ static Value literal() {
 static Value expression();
 
 /**
- * @brief Handles factor level parsing, including parenthesized expressions and
+ * @brief Handles primary level parsing, including parenthesized expressions and
  * literals.
  *
  * @return Value* The value of the parsed expression.
  */
-static Value factor() {
+static Value primary() {
   if (match(TOKEN_LPAREN)) {
     Value val = expression();
     consume(TOKEN_RPAREN);
@@ -210,16 +210,45 @@ static Value factor() {
 }
 
 /**
- * @brief Handles term level parsing, including multiplication and division.
+ * @brief Handles conditional parsing, e.g. ==, !=
  *
- * @return Value*
+ * @return Value the result of the condition
  */
-static Value term() {
-  Value val = factor();
+static Value condition(Value* lhs) {
+  if (!match(TOKEN_EQUAL_EQUAL) && !match(TOKEN_NOT_EQUAL)) {
+    parse_error("Expected condition operator but got token of type ");
+    token_type_print(parser.current->type);
+    return value_new_null();
+  }
+  enum TokenType op = parser.previous->type;
+  Value rhs = expression();
+  if (lhs->type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
+    block_new_opcode(parser.block, OP_COMPARE_INTEGER_32);
+  } else {
+    parse_error("Cannot compare values of type ");
+    value_type_print(lhs->type);
+    printf(" and ");
+    value_type_print(rhs.type);
+    printf("\n");
+    return value_new_null();
+  }
+  if (op == TOKEN_NOT_EQUAL) {
+    block_new_opcode(parser.block, OP_NOT);
+  }
+  return value_new_boolean(true);
+}
+
+/**
+ * @brief Handles factor level parsing, including multiplication and division.
+ *
+ * @return Value The value of the parsed expression.
+ */
+static Value factor() {
+  Value val = primary();
 
   while (match(TOKEN_STAR) || match(TOKEN_SLASH)) {
     enum TokenType op = parser.previous->type;
-    Value rhs = factor();
+    Value rhs = primary();
     if (op == TOKEN_STAR) {
       if (val.type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
         block_new_opcode(parser.block, OP_MULTIPLY_INTEGER_32);
@@ -247,6 +276,38 @@ static Value term() {
   }
 
   return val;
+}
+
+/**
+ * @brief Handles term-level parsing (addition and subtraction)
+ */
+static Value term(Value* lhs) {
+  enum TokenType op = parser.previous->type;
+  Value rhs = factor();
+  if (op == TOKEN_PLUS) {
+    if (lhs->type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
+      block_new_opcode(parser.block, OP_ADD_INTEGER_32);
+    } else {
+      // TODO: create a better error message
+      parse_error("Cannot add values of type ");
+      value_type_print(lhs->type);
+      printf(" and ");
+      value_type_print(rhs.type);
+      printf("\n");
+    }
+  } else if (op == TOKEN_MINUS) {
+    if (lhs->type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
+      block_new_opcode(parser.block, OP_SUBTRACT_INTEGER_32);
+    } else {
+      // TODO: create a better error message
+      parse_error("Cannot subtract values of type ");
+      value_type_print(lhs->type);
+      printf(" and ");
+      value_type_print(rhs.type);
+      printf("\n");
+    }
+  }
+  return rhs;
 }
 
 /**
@@ -308,41 +369,18 @@ static Value expression() {
   if (match(TOKEN_MINUS) || match(TOKEN_EXCLAMATION)) {
     val = unary();
   } else {
-    val = term();
+    val = term(&val);
   }
 
-  // infix operators
-  if (check(TOKEN_EQUAL)) {
+  // infix operators (by precedence)
+  while (check(TOKEN_EQUAL)) {
     assignment();
   }
-
   while (match(TOKEN_PLUS) || match(TOKEN_MINUS)) {
-    enum TokenType op = parser.previous->type;
-    Value rhs = term();
-    if (op == TOKEN_PLUS) {
-      if (val.type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
-        block_new_opcode(parser.block, OP_ADD_INTEGER_32);
-      } else {
-        // TODO: create a better error message
-        parse_error("Cannot add values of type ");
-        value_type_print(val.type);
-        printf(" and ");
-        value_type_print(rhs.type);
-        printf("\n");
-      }
-    } else if (op == TOKEN_MINUS) {
-      if (val.type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
-        block_new_opcode(parser.block, OP_SUBTRACT_INTEGER_32);
-      } else {
-        // TODO: create a better error message
-        parse_error("Cannot subtract values of type ");
-        value_type_print(val.type);
-        printf(" and ");
-        value_type_print(rhs.type);
-        printf("\n");
-      }
-    }
-    val = rhs;
+    val = term(&val);
+  }
+  while (check(TOKEN_EQUAL_EQUAL) || check(TOKEN_NOT_EQUAL)) {
+    val = condition(&val);
   }
 
   return val;
@@ -353,7 +391,13 @@ static Value expression() {
  */
 static void statement_if() {
   consume(TOKEN_LPAREN);
-  expression();
+  Value condition = expression();
+  if (condition.type != VAL_BOOL) {
+    parse_error("Expected value type VAL_BOOL but got ");
+    value_type_print(condition.type);
+    printf("\n");
+    return;
+  }
   consume(TOKEN_RPAREN);
 
   block_new_opcodes_3(parser.block, OP_CJUMPF, 0xFF, 0xFF);
@@ -389,6 +433,16 @@ static void declaration_statement() {
   consume(TOKEN_EQUAL);
 
   Value val = expression();
+
+  if (val.type != type) {
+    parse_error("Expected value type ");
+    value_type_print(val.type);
+    printf(" but got ");
+    value_type_print(type);
+    printf("\n");
+    return;
+  }
+
   hash_table_set(&parser.globals, name, &val);
 
   block_new_opcodes(parser.block, OP_CONSTANT, index);

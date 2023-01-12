@@ -69,31 +69,28 @@ void interpret(Block* block) {
       }
       case OP_NEGATE_INTEGER_32: {
         Value* v = pop_stack();
-        v->data.integer_32 = -v->data.integer_32;
-        push_stack(v);
+        push_stack(&value_new_int_32(-v->data.integer_32));
         interpreter.ip++;
         break;
       }
       case OP_ADD_INTEGER_32: {
         Value* v2 = pop_stack();
         Value* v1 = pop_stack();
-        v1->data.integer_32 += v2->data.integer_32;
-        push_stack(v1);
+        push_stack(&value_new_int_32(v1->data.integer_32 + v2->data.integer_32));
         interpreter.ip++;
         break;
       }
       case OP_SUBTRACT_INTEGER_32: {
         Value* v2 = pop_stack();
         Value* v1 = pop_stack();
-        v1->data.integer_32 -= v2->data.integer_32;
-        push_stack(v1);
+        push_stack(&value_new_int_32(v1->data.integer_32 - v2->data.integer_32));
         interpreter.ip++;
         break;
       }
       case OP_MULTIPLY_INTEGER_32: {
         Value* v2 = pop_stack();
         Value* v1 = pop_stack();
-        v1->data.integer_32 *= v2->data.integer_32;
+        push_stack(&value_new_int_32(v1->data.integer_32 * v2->data.integer_32));
         push_stack(v1);
         interpreter.ip++;
         break;
@@ -101,8 +98,15 @@ void interpret(Block* block) {
       case OP_DIVIDE_INTEGER_32: {
         Value* v2 = pop_stack();
         Value* v1 = pop_stack();
-        v1->data.integer_32 /= v2->data.integer_32;
+        push_stack(&value_new_int_32(v1->data.integer_32 / v2->data.integer_32));
         push_stack(v1);
+        interpreter.ip++;
+        break;
+      }
+      case OP_COMPARE_INTEGER_32: {
+        Value* v2 = pop_stack();
+        Value* v1 = pop_stack();
+        push_stack(&value_new_boolean(v1->data.integer_32 == v2->data.integer_32));
         interpreter.ip++;
         break;
       }
@@ -124,7 +128,8 @@ void interpret(Block* block) {
       }
       case OP_GLOBAL_DEFINE: {
         Value* name = pop_stack();
-        hash_table_set(&interpreter.globals, TO_STRING(name)->value, &value_new_null());
+        hash_table_set(&interpreter.globals, TO_STRING(name)->value,
+                       &value_new_null());
         interpreter.ip++;
         break;
       }
@@ -137,7 +142,8 @@ void interpret(Block* block) {
       }
       case OP_GLOBAL_GET: {
         Value* name = pop_stack();
-        Value* value = hash_table_get(&interpreter.globals, TO_STRING(name)->value);
+        Value* value =
+            hash_table_get(&interpreter.globals, TO_STRING(name)->value);
         push_stack(value_clone(value));
         interpreter.ip++;
         break;
@@ -152,6 +158,13 @@ void interpret(Block* block) {
         } else {
           interpreter.ip++;
         }
+        break;
+      }
+      case OP_JUMP: {
+        uint8_t high = *(uint8_t*)block->opcodes->data[++interpreter.ip];
+        uint8_t low = *(uint8_t*)block->opcodes->data[++interpreter.ip];
+        uint16_t offset = (high << 8) | low;
+        interpreter.ip += offset;
         break;
       }
       default: {
