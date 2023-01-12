@@ -216,13 +216,14 @@ void interpret(Block* block) {
       }
       case OP_LOCAL_GET: {
         uint8_t index = *(uint8_t*)block->opcodes->data[++interpreter.ip];
-        push_stack(interpreter.stack[interpreter.sp - index - 1]);
+        push_stack(interpreter.stack[index]);
         interpreter.ip++;
-        break;        
+        break;
       }
       case OP_LOCAL_SET: {
         uint8_t index = *(uint8_t*)block->opcodes->data[++interpreter.ip];
-        interpreter.stack[interpreter.sp - index - 1] = peek_stack(0);
+        interpreter.stack[index] = peek_stack(0);
+        if (interpreter.sp != 1) pop_stack();
         interpreter.ip++;
         break;
       }

@@ -153,12 +153,41 @@ static void pop_locals() {
 }
 
 /**
+ * @brief Gets the index of a local variable on the local stack or -1 if it
+ * doesn't exist.
+ *
+ * @param name the name of the local
+ * @return int the index of the local
+ */
+static int get_local(Token* name) {
+  for (int i = parser.local_count - 1; i >= 0; i--) {
+    // break if we've reached the end of the current scope
+    if (parser.locals[i].depth < parser.scope)
+      break;
+
+    // check for duplicate local names
+    if (strcmp(parser.locals[i].name->lexeme, name->lexeme) == 0) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+/**
  * @brief Initializes a new local variable on the local stack.
  *
  * @param name the name of the local
- * @return size_t the index of the local
+ * @return int the index of the local
  */
-static size_t new_local(Token* name) {
+static int new_local(Token* name) {
+  if (parser.local_count == UINT8_MAX) {
+    parse_error("Too many local variables in scope\n");
+    return -1;
+  }
+  if (get_local(name) != -1) {
+    parse_error("Redefinition of variable with name '%s'\n", name->lexeme);
+    return -1;
+  }
   parser.locals[parser.local_count].name = name;
   parser.locals[parser.local_count].depth = parser.scope;
   parser.local_count++;
@@ -193,8 +222,7 @@ static Value variable() {
 
       // check all potentials for a match and emit the appropriate opcode
       if (strcmp(parser.locals[i].name->lexeme, token->lexeme) == 0) {
-        block_new_opcodes(parser.block, OP_LOCAL_GET,
-                          parser.local_count - i - 1);
+        block_new_opcodes(parser.block, OP_LOCAL_GET, i);
         return value_new_null();
       }
     }
@@ -416,15 +444,36 @@ static Value unary() {
  *
  */
 static Value assignment() {
-  PString* name = p_object_string_new(parser.previous->lexeme);
-  Value val = value_new_object((PObject*)name);
+  Token* name = parser.previous;
   match(TOKEN_EQUAL);
   block_new_opcode(parser.block, OP_POP);
   Value rhs = expression();
-  block_new_opcodes(parser.block, OP_CONSTANT,
-                    block_new_constant(parser.block, &val));
-  block_new_opcode(parser.block, OP_GLOBAL_SET);
-  hash_table_set(&parser.globals, name->value, &rhs);
+  if (!parser.scope) {
+    PString* pname = p_object_string_new(name->lexeme);
+    Value val = value_new_object((PObject*)name);
+    block_new_opcodes(parser.block, OP_CONSTANT,
+                      block_new_constant(parser.block, &val));
+    block_new_opcode(parser.block, OP_GLOBAL_SET);
+    Value* global = hash_table_get(&parser.globals, pname->value);
+    if (!global) {
+      parse_error("Undefined variable '%s'", name->lexeme);
+      return value_new_null();
+    } else if (global->type != rhs.type) {
+      parse_error("Cannot assign value of type ");
+      value_type_print(rhs.type);
+      printf(" to variable of type ");
+      value_type_print(global->type);
+      printf("\n");
+    }
+    hash_table_set(&parser.globals, pname->value, &rhs);
+  } else {
+    int index = get_local(name);
+    if (index == -1) {
+      parse_error("Undefined variable '%s'", name->lexeme);
+      return value_new_null();
+    }
+    block_new_opcodes(parser.block, OP_LOCAL_SET, index);
+  }
   return rhs;
 }
 
@@ -482,13 +531,16 @@ static void statement_if() {
 
 /**
  * @brief Implementation of a local declaration.
- * 
- * @param type 
+ *
+ * @param type
  */
 static void declaration_local(enum ValueType type) {
   Token* name = parser.previous;
   consume(TOKEN_EQUAL);
   Value val = expression();
+  if (get_local(name) != -1) {
+    parse_error("Variable '%s' already declared", name->lexeme);
+  }
   if (val.type != type) {
     parse_error("Expected value type ");
     value_type_print(val.type);
@@ -497,7 +549,7 @@ static void declaration_local(enum ValueType type) {
     printf("\n");
     return;
   }
-  
+
   block_new_opcodes(parser.block, OP_LOCAL_SET, new_local(name));
 }
 
