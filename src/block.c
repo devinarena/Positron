@@ -191,6 +191,16 @@ size_t block_print_opcode(Block* block, size_t index) {
     case OP_CONSTANT:
       printf("OP_CONSTANT [%d]", *(uint8_t*)block->opcodes->data[index + 1]);
       return 2;
+    case OP_LOCAL_GET: {
+      uint8_t slot = *(uint8_t*)block->opcodes->data[index + 1];
+      printf("OP_LOCAL_GET [%d]", slot);
+      return 2;
+    }
+    case OP_LOCAL_SET: {
+      uint8_t slot = *(uint8_t*)block->opcodes->data[index + 1];
+      printf("OP_LOCAL_SET [%d]", slot);
+      return 2;
+    }
     case OP_CJUMPF: {
       uint16_t addr = *(uint8_t*)block->opcodes->data[index + 1] << 8 |
                       *(uint8_t*)block->opcodes->data[index + 2];

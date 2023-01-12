@@ -24,6 +24,8 @@ enum OpCode {
     OP_GLOBAL_DEFINE,
     OP_GLOBAL_SET,
     OP_GLOBAL_GET,
+    OP_LOCAL_SET,
+    OP_LOCAL_GET,
 
     OP_ADD_INTEGER_32,
     OP_SUBTRACT_INTEGER_32,
@@ -40,11 +42,12 @@ enum OpCode {
 
     OP_NOT,
 
-    OP_CJUMPF,
-
     // Two bytes
     OP_CONSTANT,
+
+    // Three bytes
     OP_JUMP,
+    OP_CJUMPF,
 };
 
 typedef struct {

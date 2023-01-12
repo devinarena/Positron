@@ -1,4 +1,6 @@
-bool test = false
+bool test = true
 
-if (!test == true)
-    print "test"
+if (test) {
+    i32 x = 5
+    print x
+}

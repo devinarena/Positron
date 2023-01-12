@@ -15,11 +15,21 @@
 #include "hash_table.h"
 #include "object.h"
 
+#define MAX_LOCALS UINT8_MAX
+
+typedef struct Local {
+    Token* name;
+    size_t depth;
+} Local;
+
 typedef struct Parser {
     Token* current;
     Token* previous;
     Block* block;
     HashTable globals;
+    size_t scope;
+    Local locals[MAX_LOCALS];
+    size_t local_count;
     bool had_error;
 } Parser;
 

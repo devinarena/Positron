@@ -98,6 +98,8 @@ void parse_error(const char* format, ...) {
  */
 void parser_init(Block* block) {
   parser.block = block;
+  parser.scope = 0;
+  parser.local_count = 0;
   parser.current = NULL;
   parser.previous = NULL;
   hash_table_init(&parser.globals);
@@ -137,22 +139,66 @@ static void synchronize() {
 }
 
 /**
+ * @brief Pops all locals with depths greater than the current off the stack.
+ */
+static void pop_locals() {
+  for (int i = parser.local_count - 1; i >= 0; i--) {
+    // break if we've reached the end of the current scope
+    if (parser.locals[i].depth < parser.scope)
+      break;
+
+    block_new_opcode(parser.block, OP_POP);
+    parser.local_count--;
+  }
+}
+
+/**
+ * @brief Initializes a new local variable on the local stack.
+ *
+ * @param name the name of the local
+ * @return size_t the index of the local
+ */
+static size_t new_local(Token* name) {
+  parser.locals[parser.local_count].name = name;
+  parser.locals[parser.local_count].depth = parser.scope;
+  parser.local_count++;
+  return parser.local_count - 1;
+}
+
+/**
  * @brief Parses a variable.
  */
 static Value variable() {
   Token* token = parser.previous;
-  Value* val = hash_table_get(&parser.globals, token->lexeme);
-  if (val == NULL) {
-    parse_error("Undefined variable '%s'\n", token->lexeme);
-    return value_new_null();
+  Value* val;
+  if (!parser.scope) {
+    val = hash_table_get(&parser.globals, token->lexeme);
+    if (val == NULL) {
+      parse_error("Undefined variable '%s'\n", token->lexeme);
+      return value_new_null();
+    }
+
+    uint8_t index = block_new_constant(
+        parser.block,
+        &value_new_object((PObject*)p_object_string_new(token->lexeme)));
+
+    block_new_opcodes(parser.block, OP_CONSTANT, index);
+    block_new_opcode(parser.block, OP_GLOBAL_GET);
+  } else {
+    // iterate over all locals in the current scope
+    for (int i = parser.local_count - 1; i >= 0; i--) {
+      // break if we've reached the end of the current scope
+      if (parser.locals[i].depth < parser.scope)
+        break;
+
+      // check all potentials for a match and emit the appropriate opcode
+      if (strcmp(parser.locals[i].name->lexeme, token->lexeme) == 0) {
+        block_new_opcodes(parser.block, OP_LOCAL_GET,
+                          parser.local_count - i - 1);
+        return value_new_null();
+      }
+    }
   }
-
-  uint8_t index = block_new_constant(
-      parser.block,
-      &value_new_object((PObject*)p_object_string_new(token->lexeme)));
-
-  block_new_opcodes(parser.block, OP_CONSTANT, index);
-  block_new_opcode(parser.block, OP_GLOBAL_GET);
   return *val;
 }
 
@@ -435,18 +481,30 @@ static void statement_if() {
 }
 
 /**
- * @brief Parses a declaration.
+ * @brief Implementation of a local declaration.
+ * 
+ * @param type 
  */
-static void declaration_statement() {
-  enum ValueType type = VAL_NULL;
-  if (parser.previous->type == TOKEN_I32) {
-    type = VAL_INTEGER_32;
-  } else if (parser.previous->type == TOKEN_BOOL) {
-    type = VAL_BOOL;
+static void declaration_local(enum ValueType type) {
+  Token* name = parser.previous;
+  consume(TOKEN_EQUAL);
+  Value val = expression();
+  if (val.type != type) {
+    parse_error("Expected value type ");
+    value_type_print(val.type);
+    printf(" but got ");
+    value_type_print(type);
+    printf("\n");
+    return;
   }
+  
+  block_new_opcodes(parser.block, OP_LOCAL_SET, new_local(name));
+}
 
-  consume(TOKEN_IDENTIFIER);
-
+/**
+ * @brief Implementation of a global declaration.
+ */
+static void declaration_global(enum ValueType type) {
   const char* name = parser.previous->lexeme;
   PString* pstr = p_object_string_new(name);
   Value vname = value_new_object((PObject*)pstr);
@@ -475,13 +533,35 @@ static void declaration_statement() {
 }
 
 /**
+ * @brief Parses a declaration.
+ */
+static void statement_declaration() {
+  enum ValueType type = VAL_NULL;
+  if (parser.previous->type == TOKEN_I32) {
+    type = VAL_INTEGER_32;
+  } else if (parser.previous->type == TOKEN_BOOL) {
+    type = VAL_BOOL;
+  }
+
+  consume(TOKEN_IDENTIFIER);
+
+  if (parser.scope)
+    declaration_local(type);
+  else
+    declaration_global(type);
+}
+
+/**
  * @brief Parses a block.
  *
  */
 static void block() {
+  parser.scope++;
   while (!match(TOKEN_RBRACE)) {
     statement();
   }
+  parser.scope--;
+  pop_locals();
 }
 
 /**
@@ -494,7 +574,7 @@ void statement() {
   } else if (match(TOKEN_IF)) {
     statement_if();
   } else if (match(TOKEN_I32) || match(TOKEN_BOOL)) {
-    declaration_statement();
+    statement_declaration();
   } else if (match(TOKEN_LBRACE)) {
     block();
   } else {

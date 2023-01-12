@@ -10,18 +10,26 @@
 
 Interpreter interpreter;
 
+/**
+ * @brief Initializes the interpreter.
+ */
 void interpreter_init() {
   interpreter.ip = 0;
-  interpreter.sp = -1;
+  interpreter.sp = 0;
   hash_table_init(&interpreter.globals);
 }
 
+/**
+ * @brief Pops and returns value from the stack.
+ *
+ * @return Value* the value popped from the stack
+ */
 static Value* pop_stack() {
   if (interpreter.sp < 0) {
     printf("pop from empty stack");
     exit(1);
   }
-  Value* value = interpreter.stack[interpreter.sp--];
+  Value* value = interpreter.stack[--interpreter.sp];
   return value;
 }
 
@@ -35,7 +43,21 @@ static void push_stack(Value* value) {
     printf("stack overflow");
     exit(1);
   }
-  interpreter.stack[++interpreter.sp] = value;
+  interpreter.stack[interpreter.sp++] = value;
+}
+
+/**
+ * @brief Peeks at a local variable at a specific stack depth.
+ * 
+ * @param depth the depth to peek at
+ * @return Value* the value at the depth
+ */
+static Value* peek_stack(int depth) {
+  if (interpreter.sp < depth + 1) {
+    printf("peek depth exceeds stack size");
+    exit(1);
+  }
+  return interpreter.stack[interpreter.sp - depth - 1];
 }
 
 /**
@@ -76,21 +98,24 @@ void interpret(Block* block) {
       case OP_ADD_INTEGER_32: {
         Value* v2 = pop_stack();
         Value* v1 = pop_stack();
-        push_stack(&value_new_int_32(v1->data.integer_32 + v2->data.integer_32));
+        push_stack(
+            &value_new_int_32(v1->data.integer_32 + v2->data.integer_32));
         interpreter.ip++;
         break;
       }
       case OP_SUBTRACT_INTEGER_32: {
         Value* v2 = pop_stack();
         Value* v1 = pop_stack();
-        push_stack(&value_new_int_32(v1->data.integer_32 - v2->data.integer_32));
+        push_stack(
+            &value_new_int_32(v1->data.integer_32 - v2->data.integer_32));
         interpreter.ip++;
         break;
       }
       case OP_MULTIPLY_INTEGER_32: {
         Value* v2 = pop_stack();
         Value* v1 = pop_stack();
-        push_stack(&value_new_int_32(v1->data.integer_32 * v2->data.integer_32));
+        push_stack(
+            &value_new_int_32(v1->data.integer_32 * v2->data.integer_32));
         push_stack(v1);
         interpreter.ip++;
         break;
@@ -98,7 +123,8 @@ void interpret(Block* block) {
       case OP_DIVIDE_INTEGER_32: {
         Value* v2 = pop_stack();
         Value* v1 = pop_stack();
-        push_stack(&value_new_int_32(v1->data.integer_32 / v2->data.integer_32));
+        push_stack(
+            &value_new_int_32(v1->data.integer_32 / v2->data.integer_32));
         push_stack(v1);
         interpreter.ip++;
         break;
@@ -106,35 +132,40 @@ void interpret(Block* block) {
       case OP_COMPARE_INTEGER_32: {
         Value* v2 = pop_stack();
         Value* v1 = pop_stack();
-        push_stack(&value_new_boolean(v1->data.integer_32 == v2->data.integer_32));
+        push_stack(
+            &value_new_boolean(v1->data.integer_32 == v2->data.integer_32));
         interpreter.ip++;
         break;
       }
       case OP_GREATER_INTEGER_32: {
         Value* v2 = pop_stack();
         Value* v1 = pop_stack();
-        push_stack(&value_new_boolean(v1->data.integer_32 > v2->data.integer_32));
+        push_stack(
+            &value_new_boolean(v1->data.integer_32 > v2->data.integer_32));
         interpreter.ip++;
         break;
       }
       case OP_LESS_INTEGER_32: {
         Value* v2 = pop_stack();
         Value* v1 = pop_stack();
-        push_stack(&value_new_boolean(v1->data.integer_32 < v2->data.integer_32));
+        push_stack(
+            &value_new_boolean(v1->data.integer_32 < v2->data.integer_32));
         interpreter.ip++;
         break;
       }
       case OP_GREATER_EQUAL_INTEGER_32: {
         Value* v2 = pop_stack();
         Value* v1 = pop_stack();
-        push_stack(&value_new_boolean(v1->data.integer_32 >= v2->data.integer_32));
+        push_stack(
+            &value_new_boolean(v1->data.integer_32 >= v2->data.integer_32));
         interpreter.ip++;
         break;
       }
       case OP_LESS_EQUAL_INTEGER_32: {
         Value* v2 = pop_stack();
         Value* v1 = pop_stack();
-        push_stack(&value_new_boolean(v1->data.integer_32 <= v2->data.integer_32));
+        push_stack(
+            &value_new_boolean(v1->data.integer_32 <= v2->data.integer_32));
         interpreter.ip++;
         break;
       }
@@ -183,6 +214,18 @@ void interpret(Block* block) {
         interpreter.ip++;
         break;
       }
+      case OP_LOCAL_GET: {
+        uint8_t index = *(uint8_t*)block->opcodes->data[++interpreter.ip];
+        push_stack(interpreter.stack[interpreter.sp - index - 1]);
+        interpreter.ip++;
+        break;        
+      }
+      case OP_LOCAL_SET: {
+        uint8_t index = *(uint8_t*)block->opcodes->data[++interpreter.ip];
+        interpreter.stack[interpreter.sp - index - 1] = peek_stack(0);
+        interpreter.ip++;
+        break;
+      }
       case OP_CJUMPF: {
         Value* condition = pop_stack();
         uint8_t high = *(uint8_t*)block->opcodes->data[++interpreter.ip];
@@ -228,7 +271,7 @@ void interpreter_print(Block* block) {
     block_print_opcode(block, interpreter.ip);
   }
   printf("\nstack: ");
-  for (int i = 0; i <= interpreter.sp; i++) {
+  for (int i = 0; i < interpreter.sp; i++) {
     Value* value = interpreter.stack[i];
     printf("[");
     value_print(value);
