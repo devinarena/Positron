@@ -125,6 +125,8 @@ static void synchronize() {
     switch (parser.current->type) {
       case TOKEN_PRINT:
       case TOKEN_I32:
+      case TOKEN_BOOL:
+      case TOKEN_IF:
         return;
       default:
         break;
@@ -137,7 +139,7 @@ static void synchronize() {
 /**
  * @brief Parses a variable.
  */
-static Value* variable() {
+static Value variable() {
   Token* token = parser.previous;
   Value* val = hash_table_get(&parser.globals, token->lexeme);
   if (val == NULL) {
@@ -147,35 +149,35 @@ static Value* variable() {
 
   uint8_t index = block_new_constant(
       parser.block,
-      value_new_object((PObject*)p_object_string_new(token->lexeme)));
+      &value_new_object((PObject*)p_object_string_new(token->lexeme)));
 
   block_new_opcodes(parser.block, OP_CONSTANT, index);
   block_new_opcode(parser.block, OP_GLOBAL_GET);
-  return val;
+  return *val;
 }
 
 /**
  * @brief Parses a literal.
  */
-static Value* literal() {
+static Value literal() {
   if (match(TOKEN_LITERAL_INTEGER)) {
-    Value* val = value_new_int_32(atoi(parser.previous->lexeme));
-    uint8_t index = block_new_constant(parser.block, val);
+    Value val = value_new_int_32(atoi(parser.previous->lexeme));
+    uint8_t index = block_new_constant(parser.block, &val);
     block_new_opcodes(parser.block, OP_CONSTANT, index);
     return val;
   } else if (match(TOKEN_NULL)) {
-    Value* val = value_new_null();
-    uint8_t index = block_new_constant(parser.block, val);
+    Value val = value_new_null();
+    uint8_t index = block_new_constant(parser.block, &val);
     block_new_opcodes(parser.block, OP_CONSTANT, index);
     return val;
   } else if (match(TOKEN_TRUE)) {
-    Value* val = value_new_boolean(true);
-    uint8_t index = block_new_constant(parser.block, val);
+    Value val = value_new_boolean(true);
+    uint8_t index = block_new_constant(parser.block, &val);
     block_new_opcodes(parser.block, OP_CONSTANT, index);
     return val;
   } else if (match(TOKEN_FALSE)) {
-    Value* val = value_new_boolean(false);
-    uint8_t index = block_new_constant(parser.block, val);
+    Value val = value_new_boolean(false);
+    uint8_t index = block_new_constant(parser.block, &val);
     block_new_opcodes(parser.block, OP_CONSTANT, index);
     return val;
   } else if (match(TOKEN_IDENTIFIER)) {
@@ -186,10 +188,10 @@ static Value* literal() {
     token_type_print(parser.current->type);
     printf("\n");
   }
-  return NULL;
+  return value_new_null();
 }
 
-Value* expression();
+static Value expression();
 
 /**
  * @brief Handles factor level parsing, including parenthesized expressions and
@@ -197,9 +199,9 @@ Value* expression();
  *
  * @return Value* The value of the parsed expression.
  */
-static Value* factor() {
+static Value factor() {
   if (match(TOKEN_LPAREN)) {
-    Value* val = expression();
+    Value val = expression();
     consume(TOKEN_RPAREN);
     return val;
   } else {
@@ -212,32 +214,32 @@ static Value* factor() {
  *
  * @return Value*
  */
-static Value* term() {
-  Value* val = factor();
+static Value term() {
+  Value val = factor();
 
   while (match(TOKEN_STAR) || match(TOKEN_SLASH)) {
     enum TokenType op = parser.previous->type;
-    Value* rhs = factor();
+    Value rhs = factor();
     if (op == TOKEN_STAR) {
-      if (val->type == VAL_INTEGER_32 && rhs->type == VAL_INTEGER_32) {
+      if (val.type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
         block_new_opcode(parser.block, OP_MULTIPLY_INTEGER_32);
       } else {
         // TODO: create a better error message
         parse_error("Cannot multiply values of type ");
-        value_type_print(val->type);
+        value_type_print(val.type);
         printf(" and ");
-        value_type_print(rhs->type);
+        value_type_print(rhs.type);
         printf("\n");
       }
     } else if (op == TOKEN_SLASH) {
-      if (val->type == VAL_INTEGER_32 && rhs->type == VAL_INTEGER_32) {
+      if (val.type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
         block_new_opcode(parser.block, OP_DIVIDE_INTEGER_32);
       } else {
         // TODO: create a better error message
         parse_error("Cannot divide values of type ");
-        value_type_print(val->type);
+        value_type_print(val.type);
         printf(" and ");
-        value_type_print(rhs->type);
+        value_type_print(rhs.type);
         printf("\n");
       }
     }
@@ -250,28 +252,26 @@ static Value* term() {
 /**
  * @brief Parses a unary expression.
  */
-static Value* unary() {
-  Value* val = NULL;
+static Value unary() {
   enum TokenType prev = parser.previous->type;
-  val = literal();
+  Value val = literal();
   switch (prev) {
     case TOKEN_MINUS: {
-      if (val->type == VAL_INTEGER_32) {
+      if (val.type == VAL_INTEGER_32) {
         block_new_opcode(parser.block, OP_NEGATE_INTEGER_32);
       } else {
         parse_error("Cannot negate value of type ");
-        value_type_print(val->type);
+        value_type_print(val.type);
+        printf("\n");
       }
       break;
     }
     case TOKEN_EXCLAMATION: {
-      if (val->type == VAL_BOOL) {
-        block_new_opcode(parser.block, OP_NOT);
-      } else {
-        parse_error("Cannot negate value of type ");
-        value_type_print(val->type);
-      }
-      break;
+      block_new_opcode(parser.block, OP_NOT);
+      bool data = !value_is_truthy(&val);
+      val.type = VAL_BOOL;
+      val.data.boolean = data;
+      return val;
     }
     default: {
       parse_error("Invalid unary operator");
@@ -282,10 +282,27 @@ static Value* unary() {
 }
 
 /**
+ * @brief Parses an assignment expression.
+ *
+ */
+static Value assignment() {
+  PString* name = p_object_string_new(parser.previous->lexeme);
+  Value val = value_new_object((PObject*)name);
+  match(TOKEN_EQUAL);
+  block_new_opcode(parser.block, OP_POP);
+  Value rhs = expression();
+  block_new_opcodes(parser.block, OP_CONSTANT,
+                    block_new_constant(parser.block, &val));
+  block_new_opcode(parser.block, OP_GLOBAL_SET);
+  hash_table_set(&parser.globals, name->value, &rhs);
+  return rhs;
+}
+
+/**
  * @brief Parses an expression.
  */
-Value* expression() {
-  Value* val = NULL;
+static Value expression() {
+  Value val = value_new_null();
   // TODO: clean this up
   // prefix operators
   if (match(TOKEN_MINUS) || match(TOKEN_EXCLAMATION)) {
@@ -295,29 +312,33 @@ Value* expression() {
   }
 
   // infix operators
+  if (check(TOKEN_EQUAL)) {
+    assignment();
+  }
+
   while (match(TOKEN_PLUS) || match(TOKEN_MINUS)) {
     enum TokenType op = parser.previous->type;
-    Value* rhs = term();
+    Value rhs = term();
     if (op == TOKEN_PLUS) {
-      if (val->type == VAL_INTEGER_32 && rhs->type == VAL_INTEGER_32) {
+      if (val.type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
         block_new_opcode(parser.block, OP_ADD_INTEGER_32);
       } else {
         // TODO: create a better error message
         parse_error("Cannot add values of type ");
-        value_type_print(val->type);
+        value_type_print(val.type);
         printf(" and ");
-        value_type_print(rhs->type);
+        value_type_print(rhs.type);
         printf("\n");
       }
     } else if (op == TOKEN_MINUS) {
-      if (val->type == VAL_INTEGER_32 && rhs->type == VAL_INTEGER_32) {
+      if (val.type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
         block_new_opcode(parser.block, OP_SUBTRACT_INTEGER_32);
       } else {
         // TODO: create a better error message
         parse_error("Cannot subtract values of type ");
-        value_type_print(val->type);
+        value_type_print(val.type);
         printf(" and ");
-        value_type_print(rhs->type);
+        value_type_print(rhs.type);
         printf("\n");
       }
     }
@@ -359,16 +380,16 @@ static void declaration_statement() {
 
   const char* name = parser.previous->lexeme;
   PString* pstr = p_object_string_new(name);
-  uint8_t index =
-      block_new_constant(parser.block, value_new_object((PObject*)pstr));
+  Value vname = value_new_object((PObject*)pstr);
+  uint8_t index = block_new_constant(parser.block, &vname);
 
   block_new_opcodes(parser.block, OP_CONSTANT, index);
   block_new_opcode(parser.block, OP_GLOBAL_DEFINE);
 
   consume(TOKEN_EQUAL);
 
-  Value* val = expression();
-  hash_table_set(&parser.globals, name, val);
+  Value val = expression();
+  hash_table_set(&parser.globals, name, &val);
 
   block_new_opcodes(parser.block, OP_CONSTANT, index);
   block_new_opcode(parser.block, OP_GLOBAL_SET);

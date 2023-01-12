@@ -108,9 +108,10 @@ void interpret(Block* block) {
       }
       case OP_NOT: {
         Value* v = pop_stack();
-        Value* nv = value_new_boolean(!value_is_truthy(v));
-        value_free(v);
-        push_stack(nv);
+        bool data = !value_is_truthy(v);
+        v->type = VAL_BOOL;
+        v->data.boolean = data;
+        push_stack(v);
         interpreter.ip++;
         break;
       }
@@ -123,7 +124,7 @@ void interpret(Block* block) {
       }
       case OP_GLOBAL_DEFINE: {
         Value* name = pop_stack();
-        hash_table_set(&interpreter.globals, TO_STRING(name)->value, NULL);
+        hash_table_set(&interpreter.globals, TO_STRING(name)->value, &value_new_null());
         interpreter.ip++;
         break;
       }

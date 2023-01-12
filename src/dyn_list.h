@@ -7,9 +7,6 @@
 #define INITIAL_CAPACITY 8
 #define GROWTH_FACTOR 2
 
-#define PRIMITIVE 0
-#define QSTRING 1
-
 typedef struct {
   void** data;
   size_t size;

@@ -84,7 +84,7 @@ void block_new_opcodes_3(Block* block,
  * @param constant the constant to add
  */
 uint8_t block_new_constant(Block* block, Value* constant) {
-  dyn_list_add(block->constants, (void*)constant);
+  dyn_list_add(block->constants, (void*)value_clone(constant));
   return (uint8_t)block->constants->size - 1;
 }
 

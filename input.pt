@@ -1,6 +1,8 @@
-bool test = false
+bool test = true
 
-if (!test) {
+test = false
+test = true
+
+if (test) {
     print test
-    print 123
 }

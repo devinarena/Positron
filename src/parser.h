@@ -31,7 +31,6 @@ bool parse();
 // frees the parser's memory
 void parser_free();
 
-Value* expression();
 void statement();
 
 #endif

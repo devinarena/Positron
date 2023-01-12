@@ -9,55 +9,6 @@
 #include "value.h"
 
 /**
- * @brief Allocates and returns a new 32-bit integer value.
- *
- * @param data the data to store in the value
- * @return Value* a pointer to the newly allocated value
- */
-Value* value_new_int_32(int data) {
-  Value* value = malloc(sizeof(Value));
-  value->type = VAL_INTEGER_32;
-  value->data.integer_32 = data;
-  return value;
-}
-
-/**
- * @brief Allocates and returns a new null value.
- *
- * @return Value* a pointer to the newly allocated value
- */
-Value* value_new_null() {
-  Value* value = malloc(sizeof(Value));
-  value->type = VAL_NULL;
-  value->data.integer_32 = 0;
-  return value;
-}
-
-/**
- * @brief Allocates a new object value and returns a pointer to it.
- *
- */
-Value* value_new_object(PObject* object) {
-  Value* value = malloc(sizeof(Value));
-  value->type = VAL_OBJ;
-  value->data.reference = object;
-  return value;
-}
-
-/**
- * @brief Allocates a new boolean value and returns a pointer to it.
- *
- * @param data the data to store in the value
- * @return Value* a pointer to the newly allocated value
- */
-Value* value_new_boolean(bool data) {
-  Value* value = malloc(sizeof(Value));
-  value->type = VAL_BOOL;
-  value->data.boolean = data;
-  return value;
-}
-
-/**
  * @brief Returns the truthiness of a value.
  * - null is always false
  * - bools are based on their boolean value
@@ -84,7 +35,7 @@ bool value_is_truthy(Value* value) {
 }
 
 /**
- * @brief Clones a value.
+ * @brief Clones a value as a heap allocated value.
  *
  * @param value the value to clone
  * @return Value* a newly allocated clone of that value

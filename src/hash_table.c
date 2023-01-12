@@ -147,7 +147,8 @@ bool hash_table_set(HashTable* table, const char* key, Value* value) {
   entry->key = key;
   if (entry->value != NULL)
     value_free(entry->value);
-  entry->value = value;
+  entry->value = value_clone(value);
+
   return isNewKey;
 }
 
@@ -171,8 +172,9 @@ bool hash_table_delete(HashTable* table, const char* key) {
   }
 
   entry->key = NULL;
-  entry->value = value_new_null();  // tombstone
-  entry->value->data.integer_32 = -1;
+  Value* copy = value_clone(&value_new_null());
+  copy->data.integer_32 = -1;
+  entry->value = copy;  // tombstone
   return true;
 }
 
