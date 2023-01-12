@@ -165,6 +165,12 @@ static Value literal() {
     uint8_t index = block_new_constant(parser.block, &val);
     block_new_opcodes(parser.block, OP_CONSTANT, index);
     return val;
+  } else if (match(TOKEN_LITERAL_STRING)) {
+    Value val = value_new_object(
+        (PObject*)p_object_string_new(parser.previous->lexeme));
+    uint8_t index = block_new_constant(parser.block, &val);
+    block_new_opcodes(parser.block, OP_CONSTANT, index);
+    return val;
   } else if (match(TOKEN_NULL)) {
     Value val = value_new_null();
     uint8_t index = block_new_constant(parser.block, &val);

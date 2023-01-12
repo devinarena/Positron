@@ -50,16 +50,14 @@ void p_object_type_print(enum PObjectType type) {
  * @brief Prints the given object.
  */
 void p_object_print(PObject* object) {
-  printf("<");
-  p_object_type_print(object->type);
   switch (object->type) {
     case P_OBJ_STRING:
-      printf(" %s", ((PString*)object)->value);
+      printf(((PString*)object)->value);
       break;
     default:
+      printf("<object %p>", object);
       break;
   }
-  printf(" %p>", object);
 }
 
 /**

@@ -7,6 +7,7 @@
  **/
 
 #include <ctype.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -133,9 +134,38 @@ static Token* make_token(enum TokenType type, const char* str, int length) {
   return token_new(type, buffer, lexer.line);
 }
 
+/**
+ * @brief Generates a single character token.
+ *
+ * @param type the type of token
+ * @param c the character lexeme
+ * @return Token* the created token
+ */
 static Token* single_char_token(enum TokenType type, char c) {
   lexer.index++;
   return make_token(type, &c, 1);
+}
+
+static Token* string() {
+  lexer.index++;
+  int start = lexer.index;
+  bool quote = false;
+  while (peek() != '\0') {
+    if (peek() == '\n')
+      lexer.line++;
+    else if (peek() == '"') {
+      quote = true;
+      lexer.index++;
+      break;
+    }
+    lexer.index++;
+  }
+  if (peek() == '\0' && !quote) {
+    printf("Error: unterminated string literal on line %d", lexer.line);
+    exit(1);
+  }
+  return make_token(TOKEN_LITERAL_STRING, &lexer.input[start],
+                    lexer.index - start - 1);
 }
 
 /**
@@ -203,13 +233,16 @@ Token* lexer_next_token() {
       }
       return single_char_token(TOKEN_LESS, c);
     }
+    case '"': {
+      return string();
+    }
     case '\0': {
       char* buffer = malloc(sizeof(char));
       buffer[0] = '\0';
       return token_new(TOKEN_EOF, buffer, lexer.line);
     }
     default:
-      printf("Unexpected character: %c", c);
+      printf("Unexpected character: %c\n", c);
       exit(1);
   }
 }

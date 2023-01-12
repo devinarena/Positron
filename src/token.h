@@ -13,6 +13,7 @@ enum TokenType {
   // literals
   TOKEN_LITERAL_INTEGER,
   TOKEN_LITERAL_FLOATING,
+  TOKEN_LITERAL_STRING,
   
   // keywords
   TOKEN_BOOL,

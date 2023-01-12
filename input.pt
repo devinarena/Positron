@@ -1,4 +1,4 @@
 bool test = false
 
 if (!test == true)
-    print test
+    print "test"

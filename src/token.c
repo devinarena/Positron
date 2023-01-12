@@ -57,6 +57,9 @@ void token_type_print(enum TokenType type) {
     case TOKEN_LITERAL_INTEGER:
       printf("TOKEN_LITERAL_INTEGER");
       break;
+    case TOKEN_LITERAL_STRING:
+      printf("TOKEN_LITERAL_STRING");
+      break;
     case TOKEN_BOOL:
       printf("TOKEN_BOOL");
       break;
