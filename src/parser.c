@@ -408,6 +408,35 @@ static Value term(Value* lhs) {
 }
 
 /**
+ * @brief Parses a logical expression (and and or).
+ */
+static Value logical(Value* lhs) {
+  enum TokenType op = parser.previous->type;
+  if (op == TOKEN_AND) {
+    block_new_opcode(parser.block, OP_DUPE);
+    block_new_opcodes_3(parser.block, OP_CJUMPF, 0, 0);
+    int start = parser.block->opcodes->size;
+    Value rhs = term(lhs);
+    int end = parser.block->opcodes->size;
+    uint16_t dist = end - start + 1;
+    (*(uint8_t*)parser.block->opcodes->data[start - 2]) = (dist >> 8) & 0xFF;
+    (*(uint8_t*)parser.block->opcodes->data[start - 1]) = dist & 0xFF;
+    return rhs;
+  } else if (op == TOKEN_OR) {
+    block_new_opcode(parser.block, OP_DUPE);
+    block_new_opcodes_3(parser.block, OP_CJUMPT, 0, 0);
+    int start = parser.block->opcodes->size;
+    Value rhs = term(lhs);
+    int end = parser.block->opcodes->size;
+    uint16_t dist = end - start + 1;
+    (*(uint8_t*)parser.block->opcodes->data[start - 2]) = (dist >> 8) & 0xFF;
+    (*(uint8_t*)parser.block->opcodes->data[start - 1]) = dist & 0xFF;
+    return rhs;
+  }
+  return value_new_null();
+}
+
+/**
  * @brief Parses a unary expression.
  */
 static Value unary() {
@@ -493,6 +522,9 @@ static Value expression() {
   // infix operators (by precedence)
   while (check(TOKEN_EQUAL)) {
     assignment();
+  }
+  while (match(TOKEN_AND) || match(TOKEN_OR)) {
+    val = logical(&val);
   }
   while (match(TOKEN_PLUS) || match(TOKEN_MINUS)) {
     val = term(&val);

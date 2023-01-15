@@ -20,6 +20,7 @@ enum OpCode {
     // 1 byte
     OP_NOP,
     OP_POP,
+    OP_DUPE,
     OP_PRINT,
     OP_GLOBAL_DEFINE,
     OP_GLOBAL_SET,
@@ -48,6 +49,7 @@ enum OpCode {
     // Three bytes
     OP_JUMP,
     OP_CJUMPF,
+    OP_CJUMPT,
 };
 
 typedef struct {

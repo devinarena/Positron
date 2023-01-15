@@ -135,6 +135,9 @@ size_t block_print_opcode(Block* block, size_t index) {
     case OP_POP:
       printf("OP_POP");
       return 1;
+    case OP_DUPE:
+      printf("OP_DUPE");
+      return 1;
     case OP_PRINT:
       printf("OP_PRINT");
       return 1;
@@ -205,6 +208,12 @@ size_t block_print_opcode(Block* block, size_t index) {
       uint16_t addr = *(uint8_t*)block->opcodes->data[index + 1] << 8 |
                       *(uint8_t*)block->opcodes->data[index + 2];
       printf("OP_CJUMPF [%d]", addr);
+      return 3;
+    }
+    case OP_CJUMPT: {
+      uint16_t addr = *(uint8_t*)block->opcodes->data[index + 1] << 8 |
+                      *(uint8_t*)block->opcodes->data[index + 2];
+      printf("OP_CJUMPT [%d]", addr);
       return 3;
     }
     case OP_JUMP: {

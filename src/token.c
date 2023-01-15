@@ -138,6 +138,12 @@ void token_type_print(enum TokenType type) {
     case TOKEN_LESS_EQUAL:
       printf("TOKEN_LESS_EQUAL");
       break;
+    case TOKEN_AND:
+      printf("TOKEN_AND");
+      break;
+    case TOKEN_OR:
+      printf("TOKEN_OR");
+      break;
   }
 }
 

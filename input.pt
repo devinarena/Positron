@@ -1,7 +1,7 @@
-bool test = true
+bool a = false
+bool b = true
+bool c = false
 
-if (test) {
-    i32 x = 5
-    x = 0
-    print x
+if (a || b || c) {
+    print "a or b is true"
 }

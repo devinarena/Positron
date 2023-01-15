@@ -236,6 +236,22 @@ Token* lexer_next_token() {
     case '"': {
       return string();
     }
+    case '&': {
+      if (peek_next() == '&') {
+        lexer.index += 2;
+        return make_token(TOKEN_AND, "&&", 2);
+      }
+      printf("Unexpected character: %c\n", c);
+      exit(1);
+    }
+    case '|': {
+      if (peek_next() == '|') {
+        lexer.index += 2;
+        return make_token(TOKEN_OR, "||", 2);
+      }
+      printf("Unexpected character: %c\n", c);
+      exit(1);
+    }
     case '\0': {
       char* buffer = malloc(sizeof(char));
       buffer[0] = '\0';

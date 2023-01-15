@@ -48,7 +48,7 @@ static void push_stack(Value* value) {
 
 /**
  * @brief Peeks at a local variable at a specific stack depth.
- * 
+ *
  * @param depth the depth to peek at
  * @return Value* the value at the depth
  */
@@ -79,6 +79,12 @@ void interpret(Block* block) {
       }
       case OP_POP: {
         pop_stack();
+        interpreter.ip++;
+        break;
+      }
+      case OP_DUPE: {
+        Value* v = peek_stack(0);
+        push_stack(v);
         interpreter.ip++;
         break;
       }
@@ -223,7 +229,8 @@ void interpret(Block* block) {
       case OP_LOCAL_SET: {
         uint8_t index = *(uint8_t*)block->opcodes->data[++interpreter.ip];
         interpreter.stack[index] = peek_stack(0);
-        if (interpreter.sp != 1) pop_stack();
+        if (interpreter.sp != 1)
+          pop_stack();
         interpreter.ip++;
         break;
       }
@@ -233,6 +240,18 @@ void interpret(Block* block) {
         uint8_t low = *(uint8_t*)block->opcodes->data[++interpreter.ip];
         uint16_t offset = (high << 8) | low;
         if (condition->data.boolean == false) {
+          interpreter.ip += offset;
+        } else {
+          interpreter.ip++;
+        }
+        break;
+      }
+      case OP_CJUMPT: {
+        Value* condition = pop_stack();
+        uint8_t high = *(uint8_t*)block->opcodes->data[++interpreter.ip];
+        uint8_t low = *(uint8_t*)block->opcodes->data[++interpreter.ip];
+        uint16_t offset = (high << 8) | low;
+        if (condition->data.boolean == true) {
           interpreter.ip += offset;
         } else {
           interpreter.ip++;

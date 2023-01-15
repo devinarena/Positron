@@ -45,6 +45,8 @@ enum TokenType {
   TOKEN_NOT_EQUAL,
   TOKEN_GREATER_EQUAL,
   TOKEN_LESS_EQUAL,
+  TOKEN_AND,
+  TOKEN_OR,
 
   // Thinking semi-colons will be optional for now
   TOKEN_SEMICOLON,
