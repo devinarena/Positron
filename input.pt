@@ -1,7 +1,5 @@
-bool a = false
-bool b = true
-bool c = false
+i32 a = -(-1)
 
-if (a || b || c) {
+if (a >= 0 && a <= 10) {
     print "a or b is true"
 }

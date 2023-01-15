@@ -27,7 +27,8 @@ static void advance() {
   parser.previous = parser.current;
   parser.current = lexer_next_token();
 #ifdef POSITRON_DEBUG
-  token_print(parser.current);
+  if (parser.previous)
+    token_print(parser.previous);
 #endif
 }
 
@@ -271,7 +272,7 @@ static Value literal() {
   return value_new_null();
 }
 
-static Value expression();
+static Value expression(enum Precedence prec);
 
 /**
  * @brief Handles primary level parsing, including parenthesized expressions and
@@ -281,7 +282,7 @@ static Value expression();
  */
 static Value primary() {
   if (match(TOKEN_LPAREN)) {
-    Value val = expression();
+    Value val = expression(PREC_ASSIGNMENT);
     consume(TOKEN_RPAREN);
     return val;
   } else {
@@ -303,7 +304,7 @@ static Value condition(Value* lhs) {
     return value_new_null();
   }
   enum TokenType op = parser.previous->type;
-  Value rhs = expression();
+  Value rhs = expression(PREC_COMPARISON);
   if (lhs->type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
     if (op == TOKEN_EQUAL_EQUAL)
       block_new_opcode(parser.block, OP_COMPARE_INTEGER_32);
@@ -320,6 +321,7 @@ static Value condition(Value* lhs) {
       block_new_opcode(parser.block, OP_COMPARE_BOOLEAN);
     else {
       parse_error("Invalid operator for boolean comparison");
+      return value_new_null();
     }
   } else {
     parse_error("Cannot compare values of type ");
@@ -380,7 +382,10 @@ static Value factor() {
  */
 static Value term(Value* lhs) {
   enum TokenType op = parser.previous->type;
+  
   Value rhs = factor();
+  if (lhs->type == VAL_NULL) return rhs;
+
   if (op == TOKEN_PLUS) {
     if (lhs->type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
       block_new_opcode(parser.block, OP_ADD_INTEGER_32);
@@ -411,12 +416,24 @@ static Value term(Value* lhs) {
  * @brief Parses a logical expression (and and or).
  */
 static Value logical(Value* lhs) {
+  if (lhs->type != VAL_BOOL) {
+    parse_error("Expected boolean value but got ");
+    value_type_print(lhs->type);
+    printf("\n");
+    return value_new_null();
+  }
   enum TokenType op = parser.previous->type;
   if (op == TOKEN_AND) {
     block_new_opcode(parser.block, OP_DUPE);
     block_new_opcodes_3(parser.block, OP_CJUMPF, 0, 0);
     int start = parser.block->opcodes->size;
-    Value rhs = term(lhs);
+    Value rhs = expression(PREC_AND);
+    if (rhs.type != VAL_BOOL) {
+      parse_error("Expected boolean value but got ");
+      value_type_print(rhs.type);
+      printf("\n");
+      return value_new_null();
+    }
     int end = parser.block->opcodes->size;
     uint16_t dist = end - start + 1;
     (*(uint8_t*)parser.block->opcodes->data[start - 2]) = (dist >> 8) & 0xFF;
@@ -426,7 +443,13 @@ static Value logical(Value* lhs) {
     block_new_opcode(parser.block, OP_DUPE);
     block_new_opcodes_3(parser.block, OP_CJUMPT, 0, 0);
     int start = parser.block->opcodes->size;
-    Value rhs = term(lhs);
+    Value rhs = expression(PREC_OR);
+    if (rhs.type != VAL_BOOL) {
+      parse_error("Expected boolean value but got ");
+      value_type_print(rhs.type);
+      printf("\n");
+      return value_new_null();
+    }
     int end = parser.block->opcodes->size;
     uint16_t dist = end - start + 1;
     (*(uint8_t*)parser.block->opcodes->data[start - 2]) = (dist >> 8) & 0xFF;
@@ -441,7 +464,7 @@ static Value logical(Value* lhs) {
  */
 static Value unary() {
   enum TokenType prev = parser.previous->type;
-  Value val = literal();
+  Value val = expression(PREC_UNARY);
   switch (prev) {
     case TOKEN_MINUS: {
       if (val.type == VAL_INTEGER_32) {
@@ -476,7 +499,7 @@ static Value assignment() {
   Token* name = parser.previous;
   match(TOKEN_EQUAL);
   block_new_opcode(parser.block, OP_POP);
-  Value rhs = expression();
+  Value rhs = expression(PREC_ASSIGNMENT);
   if (!parser.scope) {
     PString* pname = p_object_string_new(name->lexeme);
     Value val = value_new_object((PObject*)name);
@@ -509,7 +532,7 @@ static Value assignment() {
 /**
  * @brief Parses an expression.
  */
-static Value expression() {
+static Value expression(enum Precedence prec) {
   Value val = value_new_null();
   // TODO: clean this up
   // prefix operators
@@ -520,19 +543,30 @@ static Value expression() {
   }
 
   // infix operators (by precedence)
-  while (check(TOKEN_EQUAL)) {
-    assignment();
+  if (prec <= PREC_TERM) {
+    while (match(TOKEN_PLUS) || match(TOKEN_MINUS)) {
+      val = term(&val);
+    }
   }
-  while (match(TOKEN_AND) || match(TOKEN_OR)) {
-    val = logical(&val);
+  if (prec <= PREC_COMPARISON) {
+    while (check(TOKEN_EQUAL_EQUAL) || check(TOKEN_NOT_EQUAL) ||
+           check(TOKEN_GREATER) || check(TOKEN_GREATER_EQUAL) ||
+           check(TOKEN_LESS) || check(TOKEN_LESS_EQUAL)) {
+      val = condition(&val);
+      printf("\t");
+      value_print(&val);
+      printf("\n");
+    }
   }
-  while (match(TOKEN_PLUS) || match(TOKEN_MINUS)) {
-    val = term(&val);
+  if (prec <= PREC_AND) {
+    while (match(TOKEN_AND) || match(TOKEN_OR)) {
+      val = logical(&val);
+    }
   }
-  while (check(TOKEN_EQUAL_EQUAL) || check(TOKEN_NOT_EQUAL) ||
-         check(TOKEN_GREATER) || check(TOKEN_GREATER_EQUAL) ||
-         check(TOKEN_LESS) || check(TOKEN_LESS_EQUAL)) {
-    val = condition(&val);
+  if (prec <= PREC_ASSIGNMENT) {
+    while (match(TOKEN_EQUAL)) {
+      val = assignment();
+    }
   }
 
   return val;
@@ -543,7 +577,7 @@ static Value expression() {
  */
 static void statement_if() {
   consume(TOKEN_LPAREN);
-  Value condition = expression();
+  Value condition = expression(PREC_ASSIGNMENT);
   if (condition.type != VAL_BOOL) {
     parse_error("Expected value type VAL_BOOL but got ");
     value_type_print(condition.type);
@@ -569,7 +603,7 @@ static void statement_if() {
 static void declaration_local(enum ValueType type) {
   Token* name = parser.previous;
   consume(TOKEN_EQUAL);
-  Value val = expression();
+  Value val = expression(PREC_ASSIGNMENT);
   if (get_local(name) != -1) {
     parse_error("Variable '%s' already declared", name->lexeme);
   }
@@ -599,7 +633,7 @@ static void declaration_global(enum ValueType type) {
 
   consume(TOKEN_EQUAL);
 
-  Value val = expression();
+  Value val = expression(PREC_ASSIGNMENT);
 
   if (val.type != type) {
     parse_error("Expected value type ");
@@ -653,7 +687,7 @@ static void block() {
  */
 void statement() {
   if (match(TOKEN_PRINT)) {
-    expression();
+    expression(PREC_ASSIGNMENT);
     block_new_opcode(parser.block, OP_PRINT);
   } else if (match(TOKEN_IF)) {
     statement_if();
@@ -662,7 +696,7 @@ void statement() {
   } else if (match(TOKEN_LBRACE)) {
     block();
   } else {
-    expression();
+    expression(PREC_ASSIGNMENT);
   }
   match(TOKEN_SEMICOLON);
 
