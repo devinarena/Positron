@@ -20,6 +20,6 @@ typedef struct Lexer {
 // inits the lexer
 void lexer_init(const char* input);
 // scans the next token and returns it
-Token* lexer_next_token();
+Token lexer_next_token();
 
 #endif

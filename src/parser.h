@@ -37,8 +37,8 @@ typedef struct Local {
 } Local;
 
 typedef struct Parser {
-    Token* current;
-    Token* previous;
+    Token current;
+    Token previous;
     Block* block;
     HashTable globals;
     size_t scope;

@@ -17,7 +17,7 @@
 #define HASH_STRING(str) hashString(str, strlen(str))
 
 typedef struct {
-  const char* key;
+  char* key;
   Value* value;
 } Entry;
 

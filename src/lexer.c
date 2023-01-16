@@ -66,7 +66,7 @@ static void skip_whitespace() {
  *
  * @return Token* the token representing the number (floating point or integer)
  */
-static Token* number() {
+static Token number() {
   enum TokenType type = TOKEN_LITERAL_INTEGER;
   int start = lexer.index;
   while (isdigit(peek()))
@@ -90,7 +90,7 @@ static Token* number() {
   return token_new(type, buffer, lexer.line);
 }
 
-static Token* identifier() {
+static Token identifier() {
   int start = lexer.index;
   lexer.index++;
   while (isalnum(peek()))
@@ -127,7 +127,8 @@ static Token* identifier() {
  * @param c the character to generate the token from
  * @return Token* the token generated
  */
-static Token* make_token(enum TokenType type, const char* str, int length) {
+static Token make_token(enum TokenType type, const char* str) {
+  int length = strlen(str);
   char* buffer = malloc(sizeof(char) * (length + 1));
   strcpy(buffer, str);
   buffer[length] = '\0';
@@ -141,12 +142,15 @@ static Token* make_token(enum TokenType type, const char* str, int length) {
  * @param c the character lexeme
  * @return Token* the created token
  */
-static Token* single_char_token(enum TokenType type, char c) {
+static Token single_char_token(enum TokenType type, const char c) {
   lexer.index++;
-  return make_token(type, &c, 1);
+  char* buffer = malloc(sizeof(char) * 2);
+  buffer[0] = c;
+  buffer[1] = '\0';
+  return token_new(type, buffer, lexer.line);
 }
 
-static Token* string() {
+static Token string() {
   lexer.index++;
   int start = lexer.index;
   bool quote = false;
@@ -164,14 +168,17 @@ static Token* string() {
     printf("Error: unterminated string literal on line %d", lexer.line);
     exit(1);
   }
-  return make_token(TOKEN_LITERAL_STRING, &lexer.input[start],
-                    lexer.index - start - 1);
+  char* str = malloc(sizeof(char) * (lexer.index - start));
+  memcpy(str, &lexer.input[start], lexer.index - start - 1);
+  str[lexer.index - start - 1] = '\0';
+  Token t = token_new(TOKEN_LITERAL_STRING, str, lexer.line);
+  return t;
 }
 
 /**
  * @brief Scans the next token and returns it.
  */
-Token* lexer_next_token() {
+Token lexer_next_token() {
   skip_whitespace();
 
   char c = peek();
@@ -189,7 +196,7 @@ Token* lexer_next_token() {
     case '!': {
       if (peek_next() == '=') {
         lexer.index += 2;
-        return make_token(TOKEN_NOT_EQUAL, "!=", 2);
+        return make_token(TOKEN_NOT_EQUAL, "!=");
       }
       return single_char_token(TOKEN_EXCLAMATION, c);
     }
@@ -204,7 +211,7 @@ Token* lexer_next_token() {
     case '=': {
       if (peek_next() == '=') {
         lexer.index += 2;
-        return make_token(TOKEN_EQUAL_EQUAL, "==", 2);
+        return make_token(TOKEN_EQUAL_EQUAL, "==");
       }
       return single_char_token(TOKEN_EQUAL, c);
     }
@@ -222,14 +229,14 @@ Token* lexer_next_token() {
     case '>': {
       if (peek_next() == '=') {
         lexer.index += 2;
-        return make_token(TOKEN_GREATER_EQUAL, ">=", 2);
+        return make_token(TOKEN_GREATER_EQUAL, ">=");
       }
       return single_char_token(TOKEN_GREATER, c);
     }
     case '<': {
       if (peek_next() == '=') {
         lexer.index += 2;
-        return make_token(TOKEN_LESS_EQUAL, "<=", 2);
+        return make_token(TOKEN_LESS_EQUAL, "<=");
       }
       return single_char_token(TOKEN_LESS, c);
     }
@@ -239,7 +246,7 @@ Token* lexer_next_token() {
     case '&': {
       if (peek_next() == '&') {
         lexer.index += 2;
-        return make_token(TOKEN_AND, "&&", 2);
+        return make_token(TOKEN_AND, "&&");
       }
       printf("Unexpected character: %c\n", c);
       exit(1);
@@ -247,15 +254,13 @@ Token* lexer_next_token() {
     case '|': {
       if (peek_next() == '|') {
         lexer.index += 2;
-        return make_token(TOKEN_OR, "||", 2);
+        return make_token(TOKEN_OR, "||");
       }
       printf("Unexpected character: %c\n", c);
       exit(1);
     }
     case '\0': {
-      char* buffer = malloc(sizeof(char));
-      buffer[0] = '\0';
-      return token_new(TOKEN_EOF, buffer, lexer.line);
+      return make_token(TOKEN_EOF, "\\0");
     }
     default:
       printf("Unexpected character: %c\n", c);

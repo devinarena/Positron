@@ -22,13 +22,14 @@ Parser parser;
  * @brief Advances the parser to the next token, tracking the previous token.
  */
 static void advance() {
-  if (parser.current && parser.current->type == TOKEN_EOF)
+  if (parser.current.type == TOKEN_EOF)
     return;
+  if (parser.previous.type != TOKEN_NONE)
+    free((void*)parser.previous.lexeme);
   parser.previous = parser.current;
   parser.current = lexer_next_token();
 #ifdef POSITRON_DEBUG
-  if (parser.previous)
-    token_print(parser.previous);
+    token_print(&parser.previous);
 #endif
 }
 
@@ -40,7 +41,7 @@ static void advance() {
  * @return false If the current token does not match the given token type.
  */
 static bool check(enum TokenType type) {
-  if (parser.current->type == type) {
+  if (parser.current.type == type) {
     return true;
   }
   return false;
@@ -68,13 +69,13 @@ static bool match(enum TokenType type) {
  * @param type The token type to consume.
  */
 static void consume(enum TokenType type) {
-  if (parser.current->type == type) {
+  if (parser.current.type == type) {
     advance();
     return;
   }
   // TODO: create a better error message
   parse_error("Unexpected token ");
-  token_type_print(parser.current->type);
+  token_type_print(parser.current.type);
   printf("\n");
 }
 
@@ -84,7 +85,7 @@ static void consume(enum TokenType type) {
  * @param message The error message to print.
  */
 void parse_error(const char* format, ...) {
-  printf("[line %d] at '%s': ", parser.previous->line, parser.previous->lexeme);
+  printf("[line %d] at '%s': ", parser.previous.line, parser.previous.lexeme);
   va_list args;
   va_start(args, format);
   vprintf(format, args);
@@ -101,8 +102,8 @@ void parser_init(Block* block) {
   parser.block = block;
   parser.scope = 0;
   parser.local_count = 0;
-  parser.current = NULL;
-  parser.previous = NULL;
+  parser.current = token_new(TOKEN_NONE, "", 0);
+  parser.previous = token_new(TOKEN_NONE, "", 0);
   hash_table_init(&parser.globals);
 
   advance();
@@ -120,12 +121,12 @@ void parser_free() {
  */
 static void synchronize() {
   // break on a statement end (semicolon) or begin
-  while (parser.current->type != TOKEN_EOF) {
-    if (parser.previous->type == TOKEN_SEMICOLON) {
+  while (parser.current.type != TOKEN_EOF) {
+    if (parser.previous.type == TOKEN_SEMICOLON) {
       return;
     }
 
-    switch (parser.current->type) {
+    switch (parser.current.type) {
       case TOKEN_PRINT:
       case TOKEN_I32:
       case TOKEN_BOOL:
@@ -199,7 +200,7 @@ static int new_local(Token* name) {
  * @brief Parses a variable.
  */
 static Value variable() {
-  Token* token = parser.previous;
+  Token* token = &parser.previous;
   Value* val;
   if (!parser.scope) {
     val = hash_table_get(&parser.globals, token->lexeme);
@@ -236,13 +237,13 @@ static Value variable() {
  */
 static Value literal() {
   if (match(TOKEN_LITERAL_INTEGER)) {
-    Value val = value_new_int_32(atoi(parser.previous->lexeme));
+    Value val = value_new_int_32(atoi(parser.previous.lexeme));
     uint8_t index = block_new_constant(parser.block, &val);
     block_new_opcodes(parser.block, OP_CONSTANT, index);
     return val;
   } else if (match(TOKEN_LITERAL_STRING)) {
     Value val = value_new_object(
-        (PObject*)p_object_string_new(parser.previous->lexeme));
+        (PObject*)p_object_string_new(parser.previous.lexeme));
     uint8_t index = block_new_constant(parser.block, &val);
     block_new_opcodes(parser.block, OP_CONSTANT, index);
     return val;
@@ -266,7 +267,7 @@ static Value literal() {
   } else {
     // TODO: create a better error message
     parse_error("Expected literal but got token of type ");
-    token_type_print(parser.current->type);
+    token_type_print(parser.current.type);
     printf("\n");
   }
   return value_new_null();
@@ -300,10 +301,10 @@ static Value condition(Value* lhs) {
       !match(TOKEN_GREATER) && !match(TOKEN_GREATER_EQUAL) &&
       !match(TOKEN_LESS) && !match(TOKEN_LESS_EQUAL)) {
     parse_error("Expected condition operator but got token of type ");
-    token_type_print(parser.current->type);
+    token_type_print(parser.current.type);
     return value_new_null();
   }
-  enum TokenType op = parser.previous->type;
+  enum TokenType op = parser.previous.type;
   Value rhs = expression(PREC_COMPARISON);
   if (lhs->type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
     if (op == TOKEN_EQUAL_EQUAL)
@@ -346,7 +347,7 @@ static Value factor() {
   Value val = primary();
 
   while (match(TOKEN_STAR) || match(TOKEN_SLASH)) {
-    enum TokenType op = parser.previous->type;
+    enum TokenType op = parser.previous.type;
     Value rhs = primary();
     if (op == TOKEN_STAR) {
       if (val.type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
@@ -381,7 +382,7 @@ static Value factor() {
  * @brief Handles term-level parsing (addition and subtraction)
  */
 static Value term(Value* lhs) {
-  enum TokenType op = parser.previous->type;
+  enum TokenType op = parser.previous.type;
   
   Value rhs = factor();
   if (lhs->type == VAL_NULL) return rhs;
@@ -422,9 +423,8 @@ static Value logical(Value* lhs) {
     printf("\n");
     return value_new_null();
   }
-  enum TokenType op = parser.previous->type;
+  enum TokenType op = parser.previous.type;
   if (op == TOKEN_AND) {
-    block_new_opcode(parser.block, OP_DUPE);
     block_new_opcodes_3(parser.block, OP_CJUMPF, 0, 0);
     int start = parser.block->opcodes->size;
     Value rhs = expression(PREC_AND);
@@ -440,7 +440,6 @@ static Value logical(Value* lhs) {
     (*(uint8_t*)parser.block->opcodes->data[start - 1]) = dist & 0xFF;
     return rhs;
   } else if (op == TOKEN_OR) {
-    block_new_opcode(parser.block, OP_DUPE);
     block_new_opcodes_3(parser.block, OP_CJUMPT, 0, 0);
     int start = parser.block->opcodes->size;
     Value rhs = expression(PREC_OR);
@@ -463,7 +462,7 @@ static Value logical(Value* lhs) {
  * @brief Parses a unary expression.
  */
 static Value unary() {
-  enum TokenType prev = parser.previous->type;
+  enum TokenType prev = parser.previous.type;
   Value val = expression(PREC_UNARY);
   switch (prev) {
     case TOKEN_MINUS: {
@@ -496,7 +495,7 @@ static Value unary() {
  *
  */
 static Value assignment() {
-  Token* name = parser.previous;
+  Token* name = &parser.previous;
   match(TOKEN_EQUAL);
   block_new_opcode(parser.block, OP_POP);
   Value rhs = expression(PREC_ASSIGNMENT);
@@ -601,7 +600,7 @@ static void statement_if() {
  * @param type
  */
 static void declaration_local(enum ValueType type) {
-  Token* name = parser.previous;
+  Token* name = &parser.previous;
   consume(TOKEN_EQUAL);
   Value val = expression(PREC_ASSIGNMENT);
   if (get_local(name) != -1) {
@@ -623,7 +622,7 @@ static void declaration_local(enum ValueType type) {
  * @brief Implementation of a global declaration.
  */
 static void declaration_global(enum ValueType type) {
-  const char* name = parser.previous->lexeme;
+  const char* name = parser.previous.lexeme;
   PString* pstr = p_object_string_new(name);
   Value vname = value_new_object((PObject*)pstr);
   uint8_t index = block_new_constant(parser.block, &vname);
@@ -644,7 +643,11 @@ static void declaration_global(enum ValueType type) {
     return;
   }
 
-  hash_table_set(&parser.globals, name, &val);
+  printf("SET GLOBAL '%s' TO ", pstr->value);
+  value_print(&val);
+  printf("\n");
+
+  hash_table_set(&parser.globals, pstr->value, &val);
 
   block_new_opcodes(parser.block, OP_CONSTANT, index);
   block_new_opcode(parser.block, OP_GLOBAL_SET);
@@ -655,9 +658,9 @@ static void declaration_global(enum ValueType type) {
  */
 static void statement_declaration() {
   enum ValueType type = VAL_NULL;
-  if (parser.previous->type == TOKEN_I32) {
+  if (parser.previous.type == TOKEN_I32) {
     type = VAL_INTEGER_32;
-  } else if (parser.previous->type == TOKEN_BOOL) {
+  } else if (parser.previous.type == TOKEN_BOOL) {
     type = VAL_BOOL;
   }
 

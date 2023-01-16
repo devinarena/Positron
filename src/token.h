@@ -10,6 +10,8 @@
 #define POSITRON_TOKEN_H
 
 enum TokenType {
+  TOKEN_NONE,
+
   // literals
   TOKEN_LITERAL_INTEGER,
   TOKEN_LITERAL_FLOATING,
@@ -55,17 +57,15 @@ enum TokenType {
 
 typedef struct Token {
   enum TokenType type;
-  const char* lexeme;
+  char* lexeme;
   int line;
 } Token;
 
 // allocates a new token
-Token* token_new(enum TokenType type, const char* lexeme, int line);
+Token token_new(enum TokenType type, char* lexeme, int line);
 // prints a token's data
 void token_print(Token* token);
 // prints a token's type
 void token_type_print(enum TokenType type);
-// frees a token
-void token_free(Token* token);
 
 #endif
