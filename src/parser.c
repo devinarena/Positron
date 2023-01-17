@@ -25,7 +25,7 @@ static void advance() {
   if (parser.current.type == TOKEN_EOF)
     return;
   if (parser.previous.type != TOKEN_NONE)
-    free((void*)parser.previous.lexeme);
+    token_free(&parser.previous);
   parser.previous = parser.current;
   parser.current = lexer_next_token();
 #ifdef POSITRON_DEBUG
@@ -425,6 +425,7 @@ static Value logical(Value* lhs) {
   }
   enum TokenType op = parser.previous.type;
   if (op == TOKEN_AND) {
+    block_new_opcode(parser.block, OP_DUPE);
     block_new_opcodes_3(parser.block, OP_CJUMPF, 0, 0);
     int start = parser.block->opcodes->size;
     Value rhs = expression(PREC_AND);
@@ -440,6 +441,7 @@ static Value logical(Value* lhs) {
     (*(uint8_t*)parser.block->opcodes->data[start - 1]) = dist & 0xFF;
     return rhs;
   } else if (op == TOKEN_OR) {
+    block_new_opcode(parser.block, OP_DUPE);
     block_new_opcodes_3(parser.block, OP_CJUMPT, 0, 0);
     int start = parser.block->opcodes->size;
     Value rhs = expression(PREC_OR);
@@ -552,9 +554,6 @@ static Value expression(enum Precedence prec) {
            check(TOKEN_GREATER) || check(TOKEN_GREATER_EQUAL) ||
            check(TOKEN_LESS) || check(TOKEN_LESS_EQUAL)) {
       val = condition(&val);
-      printf("\t");
-      value_print(&val);
-      printf("\n");
     }
   }
   if (prec <= PREC_AND) {
@@ -643,9 +642,6 @@ static void declaration_global(enum ValueType type) {
     return;
   }
 
-  printf("SET GLOBAL '%s' TO ", pstr->value);
-  value_print(&val);
-  printf("\n");
 
   hash_table_set(&parser.globals, pstr->value, &val);
 

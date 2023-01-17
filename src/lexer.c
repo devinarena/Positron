@@ -142,7 +142,7 @@ static Token make_token(enum TokenType type, const char* str) {
  * @param c the character lexeme
  * @return Token* the created token
  */
-static Token single_char_token(enum TokenType type, const char c) {
+static Token single_char_token(enum TokenType type, char c) {
   lexer.index++;
   char* buffer = malloc(sizeof(char) * 2);
   buffer[0] = c;
@@ -170,7 +170,7 @@ static Token string() {
   }
   char* str = malloc(sizeof(char) * (lexer.index - start));
   memcpy(str, &lexer.input[start], lexer.index - start - 1);
-  str[lexer.index - start - 1] = '\0';
+  str[lexer.index - start] = '\0';
   Token t = token_new(TOKEN_LITERAL_STRING, str, lexer.line);
   return t;
 }

@@ -42,11 +42,15 @@ int main(int argc, const char* argv[]) {
     interpret(block);
 
     interpreter_free();
+    printf("1");
   }
 
   parser_free();
-  block_free(block);
+  printf("2");
+  // block_free(block);
+  printf("3");
   free((void*)source);
+  printf("4");
 
   return 0;
 }

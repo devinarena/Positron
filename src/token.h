@@ -67,5 +67,7 @@ Token token_new(enum TokenType type, char* lexeme, int line);
 void token_print(Token* token);
 // prints a token's type
 void token_type_print(enum TokenType type);
+// free a token
+void token_free(Token* token);
 
 #endif

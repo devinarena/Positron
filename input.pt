@@ -1,9 +1,10 @@
-i32 a = -8
+i32 a = -5
+bool override = false
 
-if (a >= 0 || a <= -5) {
+if (a >= 0) {
     print "a is cool"
 }
 
-if (a >= -10 && a <= 0) {
+if (a >= -10 || override) {
     print "a is very cool"
 }

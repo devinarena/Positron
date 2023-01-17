@@ -32,7 +32,7 @@ Value* hash_table_get(HashTable* table, const char* key);
 bool hash_table_set(HashTable* table, const char* key, Value* value);
 bool hash_table_delete(HashTable* table, const char* key);
 void hash_table_add_all(HashTable* from, HashTable* to);
-const char* hash_table_find_string(HashTable* table,
+char* hash_table_find_string(HashTable* table,
                              const char* chars,
                              size_t length,
                              uint32_t hash);

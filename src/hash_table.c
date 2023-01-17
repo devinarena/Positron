@@ -116,8 +116,6 @@ Value* hash_table_get(HashTable* table, const char* key) {
   if (table->count == 0)
     return NULL;
 
-  hash_table_print(table);
-
   Entry* entry = findEntry(table->entries, table->capacity, key);
   if (entry->key == NULL)
     return NULL;
@@ -177,8 +175,6 @@ bool hash_table_delete(HashTable* table, const char* key) {
 
   if (entry->value != NULL)
     value_free(entry->value);
-  if (entry->key != NULL)
-    free(entry->key);
 
   Value* copy = value_clone(&value_new_null());
   copy->data.integer_32 = -1;
@@ -212,7 +208,7 @@ void hash_table_add_all(HashTable* from, HashTable* to) {
  * @param hash uint32_t the hash of the string.
  * @return PdString* the string that was found or NULL.
  */
-const char* hash_table_find_string(HashTable* table,
+char* hash_table_find_string(HashTable* table,
                                    const char* chars,
                                    size_t length,
                                    uint32_t hash) {

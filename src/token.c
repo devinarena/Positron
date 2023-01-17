@@ -149,3 +149,14 @@ void token_type_print(enum TokenType type) {
       break;
   }
 }
+
+/**
+ * @brief Frees a token's data. Tokens are allocated on the stack, but they
+ * contain a pointer to a string that was allocated on the heap. This function
+ * frees that string.
+ *
+ * @param token the token to free
+ */
+void token_free(Token* token) {
+  free((void*)token->lexeme);
+}
