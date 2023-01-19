@@ -62,12 +62,24 @@ static void skip_whitespace() {
 }
 
 /**
+ * @brief Helper for generating tokens from the given string.
+ *
+ * @param type the type of token to generate
+ * @param c the character to generate the token from
+ * @return Token* the token generated
+ */
+static Token make_token(enum TokenType type, const char* start, size_t length) {
+  return token_new(type, start, length, lexer.line);
+}
+
+/**
  * @brief Helper function for parsing a number token.
  *
  * @return Token* the token representing the number (floating point or integer)
  */
 static Token number() {
   enum TokenType type = TOKEN_LITERAL_INTEGER;
+  const char* schar = lexer.input + lexer.index;
   int start = lexer.index;
   while (isdigit(peek()))
     lexer.index++;
@@ -83,75 +95,42 @@ static Token number() {
   }
 
   int length = lexer.index - start;
-  char* buffer = malloc(sizeof(char) * (length + 1));
-  memcpy(buffer, &lexer.input[start], length);
-  buffer[length] = '\0';
 
-  return token_new(type, buffer, lexer.line);
+
+  return make_token(type, schar, length);
 }
 
 static Token identifier() {
+  const char* schar = lexer.input + lexer.index;
   int start = lexer.index;
   lexer.index++;
   while (isalnum(peek()))
     lexer.index++;
 
   int length = lexer.index - start;
-  char* buffer = malloc(sizeof(char) * (length + 1));
-  memcpy(buffer, &lexer.input[start], length);
-  buffer[length] = '\0';
 
-  if (strcmp(buffer, "bool") == 0) {
-    return token_new(TOKEN_BOOL, buffer, lexer.line);
-  } else if (strcmp(buffer, "false") == 0) {
-    return token_new(TOKEN_FALSE, buffer, lexer.line);
-  } else if (strcmp(buffer, "i32") == 0) {
-    return token_new(TOKEN_I32, buffer, lexer.line);
-  } else if (strcmp(buffer, "if") == 0) {
-    return token_new(TOKEN_IF, buffer, lexer.line);
-  } else if (strcmp(buffer, "null") == 0) {
-    return token_new(TOKEN_NULL, buffer, lexer.line);
-  } else if (strcmp(buffer, "print") == 0) {
-    return token_new(TOKEN_PRINT, buffer, lexer.line);
-  } else if (strcmp(buffer, "true") == 0) {
-    return token_new(TOKEN_TRUE, buffer, lexer.line);
+  if (strncmp(schar, "bool", 4) == 0) {
+    return make_token(TOKEN_BOOL, schar, length);
+  } else if (strncmp(schar, "false", 5) == 0) {
+    return make_token(TOKEN_FALSE, schar, length);
+  } else if (strncmp(schar, "i32", 3) == 0) {
+    return make_token(TOKEN_I32, schar, length);
+  } else if (strncmp(schar, "if", 2) == 0) {
+    return make_token(TOKEN_IF, schar, length);
+  } else if (strncmp(schar, "null", 4) == 0) {
+    return make_token(TOKEN_NULL, schar, length);
+  } else if (strncmp(schar, "print", 5) == 0) {
+    return make_token(TOKEN_PRINT, schar, length);
+  } else if (strncmp(schar, "true", 4) == 0) {
+    return make_token(TOKEN_TRUE, schar, length);
   }
 
-  return token_new(TOKEN_IDENTIFIER, buffer, lexer.line);
-}
-
-/**
- * @brief Helper for generating tokens from the given string.
- *
- * @param type the type of token to generate
- * @param c the character to generate the token from
- * @return Token* the token generated
- */
-static Token make_token(enum TokenType type, const char* str) {
-  int length = strlen(str);
-  char* buffer = malloc(sizeof(char) * (length + 1));
-  strcpy(buffer, str);
-  buffer[length] = '\0';
-  return token_new(type, buffer, lexer.line);
-}
-
-/**
- * @brief Generates a single character token.
- *
- * @param type the type of token
- * @param c the character lexeme
- * @return Token* the created token
- */
-static Token single_char_token(enum TokenType type, char c) {
-  lexer.index++;
-  char* buffer = malloc(sizeof(char) * 2);
-  buffer[0] = c;
-  buffer[1] = '\0';
-  return token_new(type, buffer, lexer.line);
+  return make_token(TOKEN_IDENTIFIER, schar, length);
 }
 
 static Token string() {
   lexer.index++;
+  const char* schar = lexer.input + lexer.index;
   int start = lexer.index;
   bool quote = false;
   while (peek() != '\0') {
@@ -168,11 +147,8 @@ static Token string() {
     printf("Error: unterminated string literal on line %d", lexer.line);
     exit(1);
   }
-  char* str = malloc(sizeof(char) * (lexer.index - start));
-  memcpy(str, &lexer.input[start], lexer.index - start - 1);
-  str[lexer.index - start] = '\0';
-  Token t = token_new(TOKEN_LITERAL_STRING, str, lexer.line);
-  return t;
+  int length = (lexer.index - start - 1);
+  return make_token(TOKEN_LITERAL_STRING, schar, length);
 }
 
 /**
@@ -181,6 +157,7 @@ static Token string() {
 Token lexer_next_token() {
   skip_whitespace();
 
+  const char* schar = lexer.input + lexer.index;
   char c = peek();
 
   // handle the case for number literals (floating point or integer)
@@ -192,78 +169,117 @@ Token lexer_next_token() {
     return identifier();
   }
 
+  Token token = make_token(TOKEN_ERROR, schar, 0);
+
   switch (c) {
     case '!': {
       if (peek_next() == '=') {
+        token = make_token(TOKEN_NOT_EQUAL, schar, 2);
         lexer.index += 2;
-        return make_token(TOKEN_NOT_EQUAL, "!=");
+        break;
       }
-      return single_char_token(TOKEN_EXCLAMATION, c);
+      token = make_token(TOKEN_EXCLAMATION, schar, 1);
+      lexer.index++;
+      break;
     }
     case '+':
-      return single_char_token(TOKEN_PLUS, c);
+      token = make_token(TOKEN_PLUS, schar, 1);
+      lexer.index++;
+      break;
     case '-':
-      return single_char_token(TOKEN_MINUS, c);
+      token = make_token(TOKEN_MINUS, schar, 1);
+      lexer.index++;
+      break;
     case '*':
-      return single_char_token(TOKEN_STAR, c);
+      token = make_token(TOKEN_STAR, schar, 1);
+      lexer.index++;
+      break;
     case '/':
-      return single_char_token(TOKEN_SLASH, c);
+      token = make_token(TOKEN_SLASH, schar, 1);
+      lexer.index++;
+      break;
     case '=': {
       if (peek_next() == '=') {
+        token = make_token(TOKEN_EQUAL_EQUAL, schar, 2);
         lexer.index += 2;
-        return make_token(TOKEN_EQUAL_EQUAL, "==");
+        break;
       }
-      return single_char_token(TOKEN_EQUAL, c);
+      token = make_token(TOKEN_EQUAL, schar, 1);
+      lexer.index++;
+      break;
     }
     case '(':
-      return single_char_token(TOKEN_LPAREN, c);
+      token = make_token(TOKEN_LPAREN, schar, 1);
+      lexer.index++;
+      break;
     case ')':
-      return single_char_token(TOKEN_RPAREN, c);
+      token = make_token(TOKEN_RPAREN, schar, 1);
+      lexer.index++;
+      break;
     case '{':
-      return single_char_token(TOKEN_LBRACE, c);
+      token = make_token(TOKEN_LBRACE, schar, 1);
+      lexer.index++;
+      break;
     case '}':
-      return single_char_token(TOKEN_RBRACE, c);
+      token = make_token(TOKEN_RBRACE, schar, 1);
+      lexer.index++;
+      break;
     case ';': {
-      return single_char_token(TOKEN_SEMICOLON, c);
+      token = make_token(TOKEN_SEMICOLON, schar, 1);
+      lexer.index++;
+      break;
     }
     case '>': {
       if (peek_next() == '=') {
+        token = make_token(TOKEN_GREATER_EQUAL, schar, 2);
         lexer.index += 2;
-        return make_token(TOKEN_GREATER_EQUAL, ">=");
+        break;
       }
-      return single_char_token(TOKEN_GREATER, c);
+      token = make_token(TOKEN_GREATER, schar, 1);
+      lexer.index++;
+      break;
     }
     case '<': {
       if (peek_next() == '=') {
+        token = make_token(TOKEN_LESS_EQUAL, schar, 2);
         lexer.index += 2;
-        return make_token(TOKEN_LESS_EQUAL, "<=");
+        break;
       }
-      return single_char_token(TOKEN_LESS, c);
+      token = make_token(TOKEN_LESS, schar, 1);
+      lexer.index++;
+      break;
     }
     case '"': {
-      return string();
+      token = string();
+      break;
     }
     case '&': {
       if (peek_next() == '&') {
+        token = make_token(TOKEN_AND, schar, 2);
         lexer.index += 2;
-        return make_token(TOKEN_AND, "&&");
+        break;
       }
       printf("Unexpected character: %c\n", c);
       exit(1);
     }
     case '|': {
       if (peek_next() == '|') {
+        token = make_token(TOKEN_OR, schar, 2);
         lexer.index += 2;
-        return make_token(TOKEN_OR, "||");
+        break;
       }
       printf("Unexpected character: %c\n", c);
       exit(1);
     }
     case '\0': {
-      return make_token(TOKEN_EOF, "\\0");
+      token = make_token(TOKEN_EOF, schar, 1);
+      lexer.index++;
+      break;
     }
     default:
       printf("Unexpected character: %c\n", c);
       exit(1);
   }
+
+  return token;
 }

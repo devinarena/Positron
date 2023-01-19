@@ -7,6 +7,8 @@
  * @since 1/6/2023
  **/
 
+#include <stdio.h>
+
 #include "block.h"
 
 /**
@@ -84,7 +86,8 @@ void block_new_opcodes_3(Block* block,
  * @param constant the constant to add
  */
 uint8_t block_new_constant(Block* block, Value* constant) {
-  dyn_list_add(block->constants, (void*)value_clone(constant));
+  Value* clone = value_clone(constant);
+  dyn_list_add(block->constants, (void*)clone);
   return (uint8_t)block->constants->size - 1;
 }
 
@@ -116,7 +119,7 @@ void block_print(Block* block) {
  * @param block
  */
 void block_free(Block* block) {
-  free((void*)block->name);
+  free((char*)block->name);
   dyn_list_free(block->opcodes);
   dyn_list_free(block->constants);
   free(block);

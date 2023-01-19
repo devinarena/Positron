@@ -11,6 +11,7 @@
 
 enum TokenType {
   TOKEN_NONE,
+  TOKEN_ERROR,
 
   // literals
   TOKEN_LITERAL_INTEGER,
@@ -57,17 +58,17 @@ enum TokenType {
 
 typedef struct Token {
   enum TokenType type;
-  char* lexeme;
+  const char* start;
+  int length;
   int line;
 } Token;
 
 // allocates a new token
-Token token_new(enum TokenType type, char* lexeme, int line);
+Token token_new(enum TokenType type, const char* start, size_t length, int line);
 // prints a token's data
 void token_print(Token* token);
 // prints a token's type
 void token_type_print(enum TokenType type);
-// free a token
-void token_free(Token* token);
+void token_print_lexeme(Token* token);
 
 #endif

@@ -26,12 +26,15 @@ PObject* p_object_new(enum PObjectType type) {
 /**
  * @brief Allocates and returns a new string object.
  */
-PString* p_object_string_new(const char* data) {
+PString* p_object_string_new(const char* data, size_t length) {
   PString* string = malloc(sizeof(PString));
   string->base = *p_object_new(P_OBJ_STRING);
-  string->length = strlen(data);
-  string->value = malloc(strlen(data));
-  strcpy(string->value, data);
+  string->length = length;
+
+  string->value = malloc(length + 1);
+  memcpy(string->value, data, length);
+  string->value[length] = '\0';
+  
   return string;
 }
 
@@ -63,7 +66,7 @@ void p_object_print(PObject* object) {
 /**
  * @brief Frees the memory allocated by an object.
  */
-void object_free(PObject* object) {
+void p_object_free(PObject* object) {
   switch (object->type) {
     case P_OBJ_STRING: {
       PString* string = (PString*)object;

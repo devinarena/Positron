@@ -16,6 +16,8 @@
 #include "token.h"
 #include "value.h"
 
+#define max(a, b) ((a) > (b) ? (a) : (b))
+
 Parser parser;
 
 /**
@@ -24,12 +26,17 @@ Parser parser;
 static void advance() {
   if (parser.current.type == TOKEN_EOF)
     return;
-  if (parser.previous.type != TOKEN_NONE)
-    token_free(&parser.previous);
+  // TODO: need to free strings allocated by tokens
+  // if (parser.previous.type != TOKEN_NONE) {
+  //   token_free(&parser.previous);
+  // }
   parser.previous = parser.current;
   parser.current = lexer_next_token();
 #ifdef POSITRON_DEBUG
-    token_print(&parser.previous);
+  token_print(&parser.previous);
+  printf("->");
+  token_print(&parser.current);
+  printf("\n");
 #endif
 }
 
@@ -85,7 +92,9 @@ static void consume(enum TokenType type) {
  * @param message The error message to print.
  */
 void parse_error(const char* format, ...) {
-  printf("[line %d] at '%s': ", parser.previous.line, parser.previous.lexeme);
+  printf("[line %d] Error at '", parser.previous.line);
+  token_print_lexeme(&parser.previous);
+  printf("': ");
   va_list args;
   va_start(args, format);
   vprintf(format, args);
@@ -102,8 +111,6 @@ void parser_init(Block* block) {
   parser.block = block;
   parser.scope = 0;
   parser.local_count = 0;
-  parser.current = token_new(TOKEN_NONE, "", 0);
-  parser.previous = token_new(TOKEN_NONE, "", 0);
   hash_table_init(&parser.globals);
 
   advance();
@@ -168,7 +175,8 @@ static int get_local(Token* name) {
       break;
 
     // check for duplicate local names
-    if (strcmp(parser.locals[i].name->lexeme, name->lexeme) == 0) {
+    if (strncmp(parser.locals[i].name->start, name->start,
+                max(parser.locals[i].name->length, name->length)) == 0) {
       return i;
     }
   }
@@ -187,7 +195,9 @@ static int new_local(Token* name) {
     return -1;
   }
   if (get_local(name) != -1) {
-    parse_error("Redefinition of variable with name '%s'\n", name->lexeme);
+    parse_error("Redefinition of variable with name '");
+    token_print_lexeme(name);
+    printf("'\n");
     return -1;
   }
   parser.locals[parser.local_count].name = name;
@@ -203,15 +213,17 @@ static Value variable() {
   Token* token = &parser.previous;
   Value* val;
   if (!parser.scope) {
-    val = hash_table_get(&parser.globals, token->lexeme);
+    val = hash_table_get_n(&parser.globals, token->start, token->length);
     if (val == NULL) {
-      parse_error("Undefined variable '%s'\n", token->lexeme);
+      parse_error("Undefined variable '");
+      token_print_lexeme(token);
+      printf("'\n");
       return value_new_null();
     }
 
     uint8_t index = block_new_constant(
-        parser.block,
-        &value_new_object((PObject*)p_object_string_new(token->lexeme)));
+        parser.block, &value_new_object((PObject*)p_object_string_new(
+                          token->start, token->length)));
 
     block_new_opcodes(parser.block, OP_CONSTANT, index);
     block_new_opcode(parser.block, OP_GLOBAL_GET);
@@ -223,7 +235,8 @@ static Value variable() {
         break;
 
       // check all potentials for a match and emit the appropriate opcode
-      if (strcmp(parser.locals[i].name->lexeme, token->lexeme) == 0) {
+      if (strncmp(parser.locals[i].name->start, token->start,
+                  max(parser.locals[i].name->length, token->length)) == 0) {
         block_new_opcodes(parser.block, OP_LOCAL_GET, i);
         return value_new_null();
       }
@@ -237,13 +250,16 @@ static Value variable() {
  */
 static Value literal() {
   if (match(TOKEN_LITERAL_INTEGER)) {
-    Value val = value_new_int_32(atoi(parser.previous.lexeme));
+    char buffer[200];
+    strncpy(buffer, parser.previous.start, parser.previous.length);
+    buffer[parser.previous.length] = '\0';
+    Value val = value_new_int_32(atoi(buffer));
     uint8_t index = block_new_constant(parser.block, &val);
     block_new_opcodes(parser.block, OP_CONSTANT, index);
     return val;
   } else if (match(TOKEN_LITERAL_STRING)) {
-    Value val = value_new_object(
-        (PObject*)p_object_string_new(parser.previous.lexeme));
+    Value val =
+        value_new_object((PObject*)p_object_string_new(parser.previous.start, parser.previous.length));
     uint8_t index = block_new_constant(parser.block, &val);
     block_new_opcodes(parser.block, OP_CONSTANT, index);
     return val;
@@ -383,9 +399,10 @@ static Value factor() {
  */
 static Value term(Value* lhs) {
   enum TokenType op = parser.previous.type;
-  
+
   Value rhs = factor();
-  if (lhs->type == VAL_NULL) return rhs;
+  if (lhs->type == VAL_NULL)
+    return rhs;
 
   if (op == TOKEN_PLUS) {
     if (lhs->type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
@@ -502,14 +519,16 @@ static Value assignment() {
   block_new_opcode(parser.block, OP_POP);
   Value rhs = expression(PREC_ASSIGNMENT);
   if (!parser.scope) {
-    PString* pname = p_object_string_new(name->lexeme);
-    Value val = value_new_object((PObject*)name);
+    PString* pname = p_object_string_new(name->start, name->length);
+    Value val = value_new_object((PObject*)pname);
     block_new_opcodes(parser.block, OP_CONSTANT,
                       block_new_constant(parser.block, &val));
     block_new_opcode(parser.block, OP_GLOBAL_SET);
-    Value* global = hash_table_get(&parser.globals, pname->value);
+    Value* global = hash_table_get_n(&parser.globals, name->start, name->length);
     if (!global) {
-      parse_error("Undefined variable '%s'", name->lexeme);
+      parse_error("Undefined variable '");
+      token_print_lexeme(name);
+      printf("'\n");
       return value_new_null();
     } else if (global->type != rhs.type) {
       parse_error("Cannot assign value of type ");
@@ -522,7 +541,9 @@ static Value assignment() {
   } else {
     int index = get_local(name);
     if (index == -1) {
-      parse_error("Undefined variable '%s'", name->lexeme);
+      parse_error("Undefined variable '");
+      token_print_lexeme(name);
+      printf("'\n");
       return value_new_null();
     }
     block_new_opcodes(parser.block, OP_LOCAL_SET, index);
@@ -603,7 +624,9 @@ static void declaration_local(enum ValueType type) {
   consume(TOKEN_EQUAL);
   Value val = expression(PREC_ASSIGNMENT);
   if (get_local(name) != -1) {
-    parse_error("Variable '%s' already declared", name->lexeme);
+      parse_error("Variable '");
+      token_print_lexeme(name);
+      printf("' already declared.\n");
   }
   if (val.type != type) {
     parse_error("Expected value type ");
@@ -621,15 +644,18 @@ static void declaration_local(enum ValueType type) {
  * @brief Implementation of a global declaration.
  */
 static void declaration_global(enum ValueType type) {
-  const char* name = parser.previous.lexeme;
-  PString* pstr = p_object_string_new(name);
+
+  Token* name = &parser.previous;
+  PString* pstr = p_object_string_new(name->start, name->length);
   Value vname = value_new_object((PObject*)pstr);
   uint8_t index = block_new_constant(parser.block, &vname);
+
 
   block_new_opcodes(parser.block, OP_CONSTANT, index);
   block_new_opcode(parser.block, OP_GLOBAL_DEFINE);
 
   consume(TOKEN_EQUAL);
+
 
   Value val = expression(PREC_ASSIGNMENT);
 
@@ -641,7 +667,6 @@ static void declaration_global(enum ValueType type) {
     printf("\n");
     return;
   }
-
 
   hash_table_set(&parser.globals, pstr->value, &val);
 

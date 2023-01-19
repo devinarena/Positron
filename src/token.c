@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "token.h"
 
@@ -18,10 +19,14 @@
  * @param lexeme the lexeme of the token
  * @param line the line the token was found on
  */
-Token token_new(enum TokenType type, char* lexeme, int line) {
+Token token_new(enum TokenType type,
+                const char* start,
+                size_t length,
+                int line) {
   Token token;
   token.type = type;
-  token.lexeme = lexeme;
+  token.start = start;
+  token.length = length;
   token.line = line;
   return token;
 }
@@ -36,10 +41,12 @@ void token_print(Token* token) {
     default:
       printf("Token(");
       token_type_print(token->type);
-      printf(", %s, %d)\n", token->lexeme, token->line);
+      printf(", ");
+      token_print_lexeme(token);
+      printf(", %d)", token->line);
       break;
     case TOKEN_EOF:
-      printf("Token(TOKEN_EOF, \\0, %d)\n", token->line);
+      printf("Token(TOKEN_EOF, \\0, %d)", token->line);
       return;
   }
 }
@@ -53,6 +60,9 @@ void token_type_print(enum TokenType type) {
   switch (type) {
     case TOKEN_NONE:
       printf("TOKEN_NONE");
+      break;
+    case TOKEN_ERROR:
+      printf("TOKEN_ERROR");
       break;
     case TOKEN_LITERAL_FLOATING:
       printf("TOKEN_LITERAL_FLOATING");
@@ -151,12 +161,10 @@ void token_type_print(enum TokenType type) {
 }
 
 /**
- * @brief Frees a token's data. Tokens are allocated on the stack, but they
- * contain a pointer to a string that was allocated on the heap. This function
- * frees that string.
+ * @brief Prints a token's name.
  *
- * @param token the token to free
+ * @param type the token to print
  */
-void token_free(Token* token) {
-  free((void*)token->lexeme);
+void token_print_lexeme(Token* token) {
+  printf("%*.*s", token->length, token->length, token->start);
 }

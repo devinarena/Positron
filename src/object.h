@@ -31,7 +31,7 @@ typedef struct PString {
 
 // allocates and returns a new PObject.
 PObject* p_object_new(enum PObjectType type);
-PString* p_object_string_new(const char* value);
+PString* p_object_string_new(const char* value, size_t length);
 // prints the type of the given PObject.
 void p_object_type_print(enum PObjectType type);
 // prints the given PObject.

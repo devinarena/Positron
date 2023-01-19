@@ -6,6 +6,8 @@
  * @since 1/7/2023
  **/
 
+#include <stdio.h>
+
 #include "interpreter.h"
 
 Interpreter interpreter;

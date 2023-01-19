@@ -6,6 +6,9 @@
  * @since Represents a value in the language, such as a number, string, etc.
  **/
 
+#include <stdlib.h>
+#include <stdio.h>
+
 #include "value.h"
 
 /**
@@ -42,8 +45,15 @@ bool value_is_truthy(Value* value) {
  */
 Value* value_clone(Value* value) {
   Value* clone = malloc(sizeof(Value));
+  
+  if (!clone) {
+    printf("Failed to allocate memory for value clone.\n");
+    exit(1);
+  }
+  
   clone->type = value->type;
   clone->data = value->data;
+
   return clone;
 }
 

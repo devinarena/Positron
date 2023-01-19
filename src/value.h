@@ -9,8 +9,6 @@
 #ifndef POSITRON_VALUE_H
 #define POSITRON_VALUE_H
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdbool.h>
 
 #include "object.h"

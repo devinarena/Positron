@@ -95,9 +95,6 @@ static void adjustCapacity(HashTable* table, int capacity) {
     table->count++;
   }
 
-  for (int i = 0; i < table->capacity; i++)
-    value_free(table->entries[i].value);
-
   free(table->entries);
 
   table->entries = entries;
@@ -109,8 +106,8 @@ static void adjustCapacity(HashTable* table, int capacity) {
  * value to the value pointer. If the key is not found, it returns false.
  *
  * @param table Table* the table to search.
- * @param key PdString* the key to search for.
- * @return bool true if the key was found, false otherwise.
+ * @param key const char* the key to search for.
+ * @return Value* a pointer to the value or NULL if the key is not found.
  */
 Value* hash_table_get(HashTable* table, const char* key) {
   if (table->count == 0)
@@ -121,6 +118,24 @@ Value* hash_table_get(HashTable* table, const char* key) {
     return NULL;
 
   return entry->value;
+}
+
+/**
+ * @brief Gets a value from the table by searching for the key. Assigns the
+ * value to the value pointer. If the key is not found, it returns false.
+ *
+ * @param table Table* the table to search.
+ * @param key_start const char* the key to search for.
+ * @param length size_t the length of the key
+ * @return Value* a pointer to the value or NULL if the key is not found.
+*/
+Value* hash_table_get_n(HashTable* table, const char* key_start, size_t length) {
+  char buffer[200];
+  if (length > 200)
+    return NULL;
+
+  memcpy(buffer, key_start, length);
+  return hash_table_get(table, buffer);
 }
 
 /**
@@ -145,10 +160,7 @@ bool hash_table_set(HashTable* table, const char* key, Value* value) {
     table->count++;
 
   if (isNewKey) {
-    int length = strlen(key);
-    entry->key = malloc(sizeof(char) * (length + 1));
-    strcpy(entry->key, key);
-    entry->key[length] = '\0';
+    entry->key = strdup(key);
   }
 
   if (entry->value != NULL)

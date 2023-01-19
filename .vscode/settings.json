@@ -5,6 +5,7 @@
         "dyn_list.h": "c",
         "value.h": "c",
         "stdio.h": "c",
-        "token.h": "c"
+        "token.h": "c",
+        "block.h": "c"
     }
 }
