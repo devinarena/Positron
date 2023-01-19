@@ -135,6 +135,7 @@ Value* hash_table_get_n(HashTable* table, const char* key_start, size_t length) 
     return NULL;
 
   memcpy(buffer, key_start, length);
+  buffer[length] = '\0';
   return hash_table_get(table, buffer);
 }
 

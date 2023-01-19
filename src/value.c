@@ -58,6 +58,31 @@ Value* value_clone(Value* value) {
 }
 
 /**
+ * @brief Gets the value type associated with a token type.
+ * 
+ * @param type the token type
+ * @return enum ValueType the value type
+ */
+enum ValueType value_type_from_token_type(enum TokenType type) {
+  switch (type) {
+    case TOKEN_NULL:
+      return VAL_NULL;
+    case TOKEN_TRUE:
+    case TOKEN_FALSE:
+    case TOKEN_BOOL:
+      return VAL_BOOL;
+    case TOKEN_I32:
+    case TOKEN_LITERAL_INTEGER:
+      return VAL_INTEGER_32;
+    case TOKEN_STR:
+    case TOKEN_LITERAL_STRING:
+      return VAL_OBJ;
+    default:
+      return VAL_NULL;
+  }
+}
+
+/**
  * @brief Prints a value's data.
  *
  * @param value the value to print
@@ -106,6 +131,8 @@ void value_type_print(enum ValueType type) {
       break;
   }
 }
+
+
 
 /**
  * @brief Frees the memory allocated by a value.

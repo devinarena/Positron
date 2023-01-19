@@ -11,9 +11,15 @@
 
 #include <stdbool.h>
 
+#include "token.h"
 #include "object.h"
 
-enum ValueType { VAL_NULL, VAL_BOOL, VAL_INTEGER_32, VAL_OBJ };
+typedef enum ValueType {
+  VAL_NULL,
+  VAL_BOOL,
+  VAL_INTEGER_32,
+  VAL_OBJ
+} ValueType;
 
 typedef struct {
   enum ValueType type;
@@ -29,6 +35,8 @@ bool value_is_truthy(Value* value);
 
 // clones a value as a heap-allocated value
 Value* value_clone(Value* value);
+// Gets the value type associated with a token type
+ValueType value_type_from_token_type(enum TokenType type);
 
 // prints a value's data
 void value_print(Value* value);

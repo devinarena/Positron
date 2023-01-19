@@ -1,9 +1,36 @@
-i32 a = -8
+i32 a = 5
 
-if (a >= 0 || a <= -5) {
-    print "a is cool"
+bool override = false
+bool underride = true
+
+if (a >= 0 || override) {
+    print "true || false"
 }
 
-if (a >= -10 && a <= 0) {
-    print "a is very cool"
+if (a <= 0 || override) {
+    print "false || false"
+}
+
+if (a >= 0 || underride) {
+    print "true || true"
+}
+
+if (a <= 0 || underride) {
+    print "false || true"
+}
+
+if (a >= 0 && override) {
+    print "true && false"
+}
+
+if (a <= 0 && override) {
+    print "false && false"
+}
+
+if (a >= 0 && underride) {
+    print "true && true"
+}
+
+if (a <= 0 && underride) {
+    print "false && true"
 }

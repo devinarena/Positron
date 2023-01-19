@@ -1,10 +1,6 @@
-i32 a = -5
-bool override = false
+bool test = true
+str output = "hello world"
 
-if (a >= -5) {
-    print "a is cool"
-}
-
-if (a >= 0 || override) {
-    print "a is very cool"
+if (test) {
+    print output
 }

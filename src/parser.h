@@ -34,6 +34,7 @@ enum Precedence {
 typedef struct Local {
     Token* name;
     size_t depth;
+    Value* value;
 } Local;
 
 typedef struct Parser {
