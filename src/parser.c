@@ -221,7 +221,7 @@ static Value variable() {
     }
 
     uint8_t index = block_new_constant(
-        parser.block, &value_new_object((PObject*)p_object_string_new(
+        parser.block, &value_new_object((PObject*)p_object_string_new_n(
                           token->start, token->length)));
 
     block_new_opcodes(parser.block, OP_CONSTANT, index);
@@ -249,12 +249,11 @@ static Value variable() {
       printf("'\n");
       return value_new_null();
     }
-    Value varName = value_new_object((PObject*)p_object_string_new(
-                                             token->start, token->length));
-    block_new_opcodes_3(
-        parser.block, OP_CONSTANT,
-        block_new_constant(parser.block, &varName),
-        OP_GLOBAL_GET);
+    Value varName = value_new_object(
+        (PObject*)p_object_string_new_n(token->start, token->length));
+    block_new_opcodes_3(parser.block, OP_CONSTANT,
+                        block_new_constant(parser.block, &varName),
+                        OP_GLOBAL_GET);
   }
   return *val;
 }
@@ -272,7 +271,7 @@ static Value literal() {
     block_new_opcodes(parser.block, OP_CONSTANT, index);
     return val;
   } else if (match(TOKEN_LITERAL_STRING)) {
-    Value val = value_new_object((PObject*)p_object_string_new(
+    Value val = value_new_object((PObject*)p_object_string_new_n(
         parser.previous.start, parser.previous.length));
     uint8_t index = block_new_constant(parser.block, &val);
     block_new_opcodes(parser.block, OP_CONSTANT, index);
@@ -528,44 +527,34 @@ static Value unary() {
  */
 static Value assignment() {
   Token* name = &parser.previous;
-  
+  int index = get_local(name);
+
   const char* name_start = name->start;
-  int name_length = name->length;
+  const int name_length = name->length;
+  Value v_var_name = value_new_object(
+      (PObject*)p_object_string_new_n(name_start, name_length));
 
   match(TOKEN_EQUAL);
   block_new_opcode(parser.block, OP_POP);
   Value rhs = expression(PREC_ASSIGNMENT);
-  if (!parser.scope) {
-    PString* pname = p_object_string_new(name_start, name_length);
-    Value val = value_new_object((PObject*)pname);
-    block_new_opcodes(parser.block, OP_CONSTANT,
-                      block_new_constant(parser.block, &val));
-    block_new_opcode(parser.block, OP_GLOBAL_SET);
-    Value* global =
-        hash_table_get_n(&parser.globals, name_start, name_length);
-    if (!global) {
-      parse_error("Undefined variable '");
-      token_print_lexeme(name);
-      printf("'\n");
-      return value_new_null();
-    } else if (global->type != rhs.type) {
-      parse_error("Cannot assign value of type ");
-      value_type_print(rhs.type);
-      printf(" to variable of type ");
-      value_type_print(global->type);
-      printf("\n");
+
+  if (parser.scope) {
+    if (index != -1) {
+      block_new_opcodes(parser.block, OP_LOCAL_SET, index);
+      return rhs;
     }
-    hash_table_set(&parser.globals, pname->value, &rhs);
-  } else {
-    int index = get_local(name);
-    if (index == -1) {
-      parse_error("Undefined variable '");
-      token_print_lexeme(name);
-      printf("'\n");
-      return value_new_null();
-    }
-    block_new_opcodes(parser.block, OP_LOCAL_SET, index);
   }
+
+  Value* val = hash_table_get(&parser.globals, TO_STRING(v_var_name)->value);
+  if (!val) {
+    parse_error("Undefined variable '%s'", TO_STRING(v_var_name)->value);
+    return value_new_null();
+  }
+
+  block_new_opcodes(parser.block, OP_CONSTANT,
+                    block_new_constant(parser.block, &v_var_name));
+  block_new_opcode(parser.block, OP_GLOBAL_SET);
+
   return rhs;
 }
 
@@ -663,7 +652,7 @@ static void statement_declaration_local(enum ValueType type) {
  */
 static void statement_declaration_global(enum ValueType type) {
   Token* name = &parser.previous;
-  PString* pstr = p_object_string_new(name->start, name->length);
+  PString* pstr = p_object_string_new_n(name->start, name->length);
   Value vname = value_new_object((PObject*)pstr);
   uint8_t index = block_new_constant(parser.block, &vname);
 
@@ -708,6 +697,7 @@ static void statement_declaration() {
  */
 static void statement_while() {
   consume(TOKEN_LPAREN);
+  int start = parser.block->opcodes->size;
   Value condition = expression(PREC_ASSIGNMENT);
   if (condition.type != VAL_BOOL) {
     parse_error("Expected value type VAL_BOOL but got ");
@@ -716,12 +706,24 @@ static void statement_while() {
     return;
   }
   consume(TOKEN_RPAREN);
-  int start = parser.block->opcodes->size;
+  // check the conditional, if it's false, jump to after the loop
+  block_new_opcodes_3(parser.block, OP_CJUMPF, 0xFF, 0xFF);
+  int codes = parser.block->opcodes->size - 2;
   statement();
-  int distance = parser.block->opcodes->size - start + 2;
-  block_new_opcode(parser.block, OP_DUPE);
-  block_new_opcodes_3(parser.block, OP_CJUMPF, 0, 3);
-  block_new_opcodes_3(parser.block, OP_JUMP_BACK, (distance >> 8) & 0xFF, distance & 0xFF);
+  
+  int end = parser.block->opcodes->size;
+  int jump = end - (codes + 2) + 4;
+
+  uint16_t size = jump < UINT16_MAX ? jump : UINT16_MAX;
+  (*(uint8_t*)parser.block->opcodes->data[codes]) = (size >> 8) & 0xFF;
+  (*(uint8_t*)parser.block->opcodes->data[codes + 1]) = size & 0xFF;
+
+  // jump back to before the conditional to run again
+  block_new_opcodes_3(parser.block, OP_JUMP_BACK, 0xFF, 0xFF);
+  codes = parser.block->opcodes->size - 2;
+  size = (codes + 1 - start) < UINT16_MAX ? (codes + 1 - start) : UINT16_MAX;
+  (*(uint8_t*)parser.block->opcodes->data[codes]) = (size >> 8) & 0xFF;
+  (*(uint8_t*)parser.block->opcodes->data[codes + 1]) = size & 0xFF;
 }
 
 /**

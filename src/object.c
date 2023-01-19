@@ -26,7 +26,7 @@ PObject* p_object_new(enum PObjectType type) {
 /**
  * @brief Allocates and returns a new string object.
  */
-PString* p_object_string_new(const char* data, size_t length) {
+PString* p_object_string_new_n(const char* data, size_t length) {
   PString* string = malloc(sizeof(PString));
   string->base = *p_object_new(P_OBJ_STRING);
   string->length = length;
@@ -35,6 +35,20 @@ PString* p_object_string_new(const char* data, size_t length) {
   memcpy(string->value, data, length);
   string->value[length] = '\0';
   
+  return string;
+}
+
+/**
+ * @brief Allocates a new pstring from a const char*.
+ * 
+ * @param data the data to copy into the string
+ * @return PString* the newly allocated string
+ */
+PString* p_object_string_new(const char* data) {
+  PString* string = malloc(sizeof(PString));
+  string->base = *p_object_new(P_OBJ_STRING);
+  string->length = strlen(data);
+  string->value = strdup(data);
   return string;
 }
 

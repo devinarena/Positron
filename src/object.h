@@ -9,7 +9,7 @@
 #ifndef POSITRON_OBJECT_H
 #define POSITRON_OBJECT_H
 
-#define TO_STRING(val) ((PString*)val->data.reference)
+#define TO_STRING(val) ((PString*)(val).data.reference)
 
 #include <stdint.h>
 
@@ -31,7 +31,8 @@ typedef struct PString {
 
 // allocates and returns a new PObject.
 PObject* p_object_new(enum PObjectType type);
-PString* p_object_string_new(const char* value, size_t length);
+PString* p_object_string_new_n(const char* data, size_t length);
+PString* p_object_string_new(const char* data);
 // prints the type of the given PObject.
 void p_object_type_print(enum PObjectType type);
 // prints the given PObject.
