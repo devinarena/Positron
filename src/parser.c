@@ -528,17 +528,21 @@ static Value unary() {
  */
 static Value assignment() {
   Token* name = &parser.previous;
+  
+  const char* name_start = name->start;
+  int name_length = name->length;
+
   match(TOKEN_EQUAL);
   block_new_opcode(parser.block, OP_POP);
   Value rhs = expression(PREC_ASSIGNMENT);
   if (!parser.scope) {
-    PString* pname = p_object_string_new(name->start, name->length);
+    PString* pname = p_object_string_new(name_start, name_length);
     Value val = value_new_object((PObject*)pname);
     block_new_opcodes(parser.block, OP_CONSTANT,
                       block_new_constant(parser.block, &val));
     block_new_opcode(parser.block, OP_GLOBAL_SET);
     Value* global =
-        hash_table_get_n(&parser.globals, name->start, name->length);
+        hash_table_get_n(&parser.globals, name_start, name_length);
     if (!global) {
       parse_error("Undefined variable '");
       token_print_lexeme(name);
@@ -597,7 +601,7 @@ static Value expression(enum Precedence prec) {
     }
   }
   if (prec <= PREC_ASSIGNMENT) {
-    while (match(TOKEN_EQUAL)) {
+    while (check(TOKEN_EQUAL)) {
       val = assignment();
     }
   }

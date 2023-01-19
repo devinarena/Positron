@@ -6,6 +6,9 @@
         "value.h": "c",
         "stdio.h": "c",
         "token.h": "c",
-        "block.h": "c"
+        "block.h": "c",
+        "typeinfo": "c",
+        "compare": "c",
+        "type_traits": "c"
     }
 }
