@@ -225,6 +225,12 @@ size_t block_print_opcode(Block* block, size_t index) {
       printf("OP_JUMP [%d]", addr);
       return 3;
     }
+    case OP_JUMP_BACK: {
+      uint16_t addr = *(uint8_t*)block->opcodes->data[index + 1] << 8 |
+                      *(uint8_t*)block->opcodes->data[index + 2];
+      printf("OP_JUMP_BACK [%d]", addr);
+      return 3;
+    }
     default:
       printf("Unknown opcode: %d", *opcode);
       return 1;

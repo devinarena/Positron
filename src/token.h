@@ -27,6 +27,7 @@ enum TokenType {
   TOKEN_PRINT,
   TOKEN_STR,
   TOKEN_TRUE,
+  TOKEN_WHILE,
 
   TOKEN_IDENTIFIER,
 

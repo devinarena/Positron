@@ -48,6 +48,7 @@ enum OpCode {
 
     // Three bytes
     OP_JUMP,
+    OP_JUMP_BACK,
     OP_CJUMPF,
     OP_CJUMPT,
 };

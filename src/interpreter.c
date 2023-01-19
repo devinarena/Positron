@@ -267,6 +267,13 @@ void interpret(Block* block) {
         interpreter.ip += offset;
         break;
       }
+      case OP_JUMP_BACK: {
+        uint8_t high = *(uint8_t*)block->opcodes->data[++interpreter.ip];
+        uint8_t low = *(uint8_t*)block->opcodes->data[++interpreter.ip];
+        uint16_t offset = (high << 8) | low;
+        interpreter.ip -= offset;
+        break;
+      }
       default: {
         printf("Unknown opcode: %d\n",
                *(uint8_t*)block->opcodes->data[interpreter.ip]);

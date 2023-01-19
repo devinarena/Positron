@@ -633,7 +633,7 @@ static void statement_if() {
  *
  * @param type
  */
-static void declaration_local(enum ValueType type) {
+static void statement_declaration_local(enum ValueType type) {
   Token* name = &parser.previous;
   consume(TOKEN_EQUAL);
   Value val = expression(PREC_ASSIGNMENT);
@@ -657,7 +657,7 @@ static void declaration_local(enum ValueType type) {
 /**
  * @brief Implementation of a global declaration.
  */
-static void declaration_global(enum ValueType type) {
+static void statement_declaration_global(enum ValueType type) {
   Token* name = &parser.previous;
   PString* pstr = p_object_string_new(name->start, name->length);
   Value vname = value_new_object((PObject*)pstr);
@@ -694,9 +694,30 @@ static void statement_declaration() {
   consume(TOKEN_IDENTIFIER);
 
   if (parser.scope)
-    declaration_local(type);
+    statement_declaration_local(type);
   else
-    declaration_global(type);
+    statement_declaration_global(type);
+}
+
+/**
+ * @brief Parses a while statement.
+ */
+static void statement_while() {
+  consume(TOKEN_LPAREN);
+  Value condition = expression(PREC_ASSIGNMENT);
+  if (condition.type != VAL_BOOL) {
+    parse_error("Expected value type VAL_BOOL but got ");
+    value_type_print(condition.type);
+    printf("\n");
+    return;
+  }
+  consume(TOKEN_RPAREN);
+  int start = parser.block->opcodes->size;
+  statement();
+  int distance = parser.block->opcodes->size - start + 2;
+  block_new_opcode(parser.block, OP_DUPE);
+  block_new_opcodes_3(parser.block, OP_CJUMPF, 0, 3);
+  block_new_opcodes_3(parser.block, OP_JUMP_BACK, (distance >> 8) & 0xFF, distance & 0xFF);
 }
 
 /**
@@ -723,6 +744,8 @@ void statement() {
     statement_if();
   } else if (match(TOKEN_I32) || match(TOKEN_BOOL) || match(TOKEN_STR)) {
     statement_declaration();
+  } else if (match(TOKEN_WHILE)) {
+    statement_while();
   } else if (match(TOKEN_LBRACE)) {
     block();
   } else {
