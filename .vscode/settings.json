@@ -10,6 +10,8 @@
         "typeinfo": "c",
         "compare": "c",
         "type_traits": "c",
-        "cstdarg": "c"
+        "cstdarg": "c",
+        "positron.h": "c",
+        "stdbool.h": "c"
     }
 }

@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 #include "interpreter.h"
+#include "positron.h"
 
 Interpreter interpreter;
 
@@ -72,7 +73,8 @@ void interpret(Block* block) {
 
   while (interpreter.ip < block->opcodes->size) {
 #ifdef POSITRON_DEBUG
-    interpreter_print(block);
+    if (DEBUG_MODE)
+      interpreter_print(block);
 #endif
     switch (*(uint8_t*)block->opcodes->data[interpreter.ip]) {
       case OP_NOP: {
@@ -283,7 +285,8 @@ void interpret(Block* block) {
   }
 
 #ifdef POSITRON_DEBUG
-  interpreter_print(block);
+  if (DEBUG_MODE)
+    interpreter_print(block);
 #endif
 }
 

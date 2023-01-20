@@ -9,6 +9,10 @@
 #ifndef POSITRON_H
 #define POSITRON_H
 
+#include <stdbool.h>
+
+extern bool DEBUG_MODE;
+
 #define STACK_SIZE 256
 
 #define POSITRON_DEBUG

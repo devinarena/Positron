@@ -15,6 +15,7 @@
 #include "parser.h"
 #include "token.h"
 #include "value.h"
+#include "positron.h"
 
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
@@ -29,10 +30,12 @@ static void advance() {
   parser.previous = parser.current;
   parser.current = lexer_next_token();
 #ifdef POSITRON_DEBUG
-  token_print(&parser.previous);
-  printf("->");
-  token_print(&parser.current);
-  printf("\n");
+  if (DEBUG_MODE) {
+    token_print(&parser.previous);
+    printf("->");
+    token_print(&parser.current);
+    printf("\n");
+  }
 #endif
 }
 
@@ -710,7 +713,7 @@ static void statement_while() {
   block_new_opcodes_3(parser.block, OP_CJUMPF, 0xFF, 0xFF);
   int codes = parser.block->opcodes->size - 2;
   statement();
-  
+
   int end = parser.block->opcodes->size;
   int jump = end - (codes + 2) + 4;
 
