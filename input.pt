@@ -1,7 +1,10 @@
 
-i32 a = 10
+i32 a = 1000 // a
+
+// hello
 
 while (a >= 1) {
-    print a
-    a = a - 1
+    str test = "hello"
+    print test
+    a = a - 1 // test
 }

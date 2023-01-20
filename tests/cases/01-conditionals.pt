@@ -1,0 +1,36 @@
+i32 a = 5
+
+bool override = false
+bool underride = true
+
+if (a >= 0 || override) {
+    print "true || false"
+}
+
+if (a <= 0 || override) {
+    print "false || false"
+}
+
+if (a >= 0 || underride) {
+    print "true || true"
+}
+
+if (a <= 0 || underride) {
+    print "false || true"
+}
+
+if (a >= 0 && override) {
+    print "true && false"
+}
+
+if (a <= 0 && override) {
+    print "false && false"
+}
+
+if (a >= 0 && underride) {
+    print "true && true"
+}
+
+if (a <= 0 && underride) {
+    print "false && true"
+}

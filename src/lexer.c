@@ -96,7 +96,6 @@ static Token number() {
 
   int length = lexer.index - start;
 
-
   return make_token(type, schar, length);
 }
 
@@ -199,8 +198,14 @@ Token lexer_next_token() {
       lexer.index++;
       break;
     case '/':
-      token = make_token(TOKEN_SLASH, schar, 1);
-      lexer.index++;
+      if (peek_next() == '/') {
+        while (peek() != '\0' && peek() != '\n')
+          lexer.index++;
+        token = lexer_next_token();
+      } else {
+        token = make_token(TOKEN_SLASH, schar, 1);
+        lexer.index++;
+      }
       break;
     case '=': {
       if (peek_next() == '=') {

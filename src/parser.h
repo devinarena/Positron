@@ -32,7 +32,7 @@ enum Precedence {
 };
 
 typedef struct Local {
-    Token* name;
+    Token name;
     size_t depth;
     Value* value;
 } Local;

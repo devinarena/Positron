@@ -175,8 +175,8 @@ static int get_local(Token* name) {
       break;
 
     // check for duplicate local names
-    if (strncmp(parser.locals[i].name->start, name->start,
-                max(parser.locals[i].name->length, name->length)) == 0) {
+    if (strncmp(parser.locals[i].name.start, name->start,
+                max(parser.locals[i].name.length, name->length)) == 0) {
       return i;
     }
   }
@@ -201,7 +201,7 @@ static int new_local(Token* name, Value* value) {
     printf("'\n");
     return -1;
   }
-  parser.locals[parser.local_count].name = name;
+  parser.locals[parser.local_count].name = *name;
   parser.locals[parser.local_count].depth = parser.scope;
   parser.locals[parser.local_count].value = value;
   parser.local_count++;
@@ -212,20 +212,20 @@ static int new_local(Token* name, Value* value) {
  * @brief Parses a variable.
  */
 static Value variable() {
-  Token* token = &parser.previous;
+  Token token = parser.previous;
   Value* val;
   if (!parser.scope) {
-    val = hash_table_get_n(&parser.globals, token->start, token->length);
+    val = hash_table_get_n(&parser.globals, token.start, token.length);
     if (val == NULL) {
       parse_error("Undefined variable '");
-      token_print_lexeme(token);
+      token_print_lexeme(&token);
       printf("'\n");
       return value_new_null();
     }
 
     uint8_t index = block_new_constant(
         parser.block, &value_new_object((PObject*)p_object_string_new_n(
-                          token->start, token->length)));
+                          token.start, token.length)));
 
     block_new_opcodes(parser.block, OP_CONSTANT, index);
     block_new_opcode(parser.block, OP_GLOBAL_GET);
@@ -237,23 +237,23 @@ static Value variable() {
         break;
 
       // check all potentials for a match and emit the appropriate opcode
-      if (strncmp(parser.locals[i].name->start, token->start,
-                  max(parser.locals[i].name->length, token->length)) == 0) {
+      if (strncmp(parser.locals[i].name.start, token.start,
+                  max(parser.locals[i].name.length, token.length)) == 0) {
         block_new_opcodes(parser.block, OP_LOCAL_GET, i);
         return *parser.locals[i].value;
       }
     }
 
     // if we haven't found a local, check the globals
-    val = hash_table_get_n(&parser.globals, token->start, token->length);
+    val = hash_table_get_n(&parser.globals, token.start, token.length);
     if (val == NULL) {
       parse_error("Undefined variable '");
-      token_print_lexeme(token);
+      token_print_lexeme(&token);
       printf("'\n");
       return value_new_null();
     }
     Value varName = value_new_object(
-        (PObject*)p_object_string_new_n(token->start, token->length));
+        (PObject*)p_object_string_new_n(token.start, token.length));
     block_new_opcodes_3(parser.block, OP_CONSTANT,
                         block_new_constant(parser.block, &varName),
                         OP_GLOBAL_GET);
@@ -630,12 +630,13 @@ static void statement_if() {
  * @param type
  */
 static void statement_declaration_local(enum ValueType type) {
-  Token* name = &parser.previous;
+  Token name = parser.previous;
+
   consume(TOKEN_EQUAL);
   Value val = expression(PREC_ASSIGNMENT);
-  if (get_local(name) != -1) {
+  if (get_local(&name) != -1) {
     parse_error("Variable '");
-    token_print_lexeme(name);
+    token_print_lexeme(&name);
     printf("' already declared.\n");
   }
   if (val.type != type) {
@@ -647,7 +648,7 @@ static void statement_declaration_local(enum ValueType type) {
     return;
   }
 
-  block_new_opcodes(parser.block, OP_LOCAL_SET, new_local(name, &val));
+  block_new_opcodes(parser.block, OP_LOCAL_SET, new_local(&name, &val));
 }
 
 /**

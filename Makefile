@@ -3,4 +3,4 @@ all:
 
 debug:
 	gcc src/*.c -o positron -Wall -Wextra -g
-	./positron input.pt
+	./positron -d input.pt
