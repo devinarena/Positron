@@ -17,7 +17,7 @@
 typedef struct Interpreter {
     size_t ip;
     int sp;
-    Value* stack[STACK_SIZE];
+    Value stack[STACK_SIZE];
     HashTable globals;
 } Interpreter;
 

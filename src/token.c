@@ -79,6 +79,9 @@ void token_type_print(enum TokenType type) {
     case TOKEN_FALSE:
       printf("TOKEN_FALSE");
       break;
+    case TOKEN_FOR:
+      printf("TOKEN_FOR");
+      break;
     case TOKEN_I32:
       printf("TOKEN_I32");
       break;

@@ -1,10 +1,4 @@
 
-i32 a = 1000 // a
-
-// hello
-
-while (a >= 1) {
-    str test = "hello"
-    print test
-    a = a - 1 // test
+for (i32 a = 0; a < 10; a = a + 1) {
+    print a
 }

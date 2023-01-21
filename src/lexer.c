@@ -112,6 +112,8 @@ static Token identifier() {
     return make_token(TOKEN_BOOL, schar, length);
   } else if (strncmp(schar, "false", 5) == 0) {
     return make_token(TOKEN_FALSE, schar, length);
+  } else if (strncmp(schar, "for", 3) == 0) {
+    return make_token(TOKEN_FOR, schar, length);
   } else if (strncmp(schar, "i32", 3) == 0) {
     return make_token(TOKEN_I32, schar, length);
   } else if (strncmp(schar, "if", 2) == 0) {

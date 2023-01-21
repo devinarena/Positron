@@ -13,9 +13,9 @@
 
 #include "lexer.h"
 #include "parser.h"
+#include "positron.h"
 #include "token.h"
 #include "value.h"
-#include "positron.h"
 
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
@@ -138,6 +138,8 @@ static void synchronize() {
       case TOKEN_STR:
       case TOKEN_BOOL:
       case TOKEN_IF:
+      case TOKEN_WHILE:
+      case TOKEN_FOR:
         return;
       default:
         break;
@@ -153,7 +155,7 @@ static void synchronize() {
 static void pop_locals() {
   for (int i = parser.local_count - 1; i >= 0; i--) {
     // break if we've reached the end of the current scope
-    if (parser.locals[i].depth < parser.scope)
+    if (parser.locals[i].depth <= parser.scope)
       break;
 
     block_new_opcode(parser.block, OP_POP);
@@ -170,10 +172,6 @@ static void pop_locals() {
  */
 static int get_local(Token* name) {
   for (int i = parser.local_count - 1; i >= 0; i--) {
-    // break if we've reached the end of the current scope
-    if (parser.locals[i].depth < parser.scope)
-      break;
-
     // check for duplicate local names
     if (strncmp(parser.locals[i].name.start, name->start,
                 max(parser.locals[i].name.length, name->length)) == 0) {
@@ -203,7 +201,7 @@ static int new_local(Token* name, Value* value) {
   }
   parser.locals[parser.local_count].name = *name;
   parser.locals[parser.local_count].depth = parser.scope;
-  parser.locals[parser.local_count].value = value;
+  parser.locals[parser.local_count].value = *value;
   parser.local_count++;
   return parser.local_count - 1;
 }
@@ -230,18 +228,10 @@ static Value variable() {
     block_new_opcodes(parser.block, OP_CONSTANT, index);
     block_new_opcode(parser.block, OP_GLOBAL_GET);
   } else {
-    // iterate over all locals in the current scope
-    for (int i = parser.local_count - 1; i >= 0; i--) {
-      // break if we've reached the end of the current scope
-      if (parser.locals[i].depth < parser.scope)
-        break;
-
-      // check all potentials for a match and emit the appropriate opcode
-      if (strncmp(parser.locals[i].name.start, token.start,
-                  max(parser.locals[i].name.length, token.length)) == 0) {
-        block_new_opcodes(parser.block, OP_LOCAL_GET, i);
-        return *parser.locals[i].value;
-      }
+    int local = get_local(&token);
+    if (local != -1) {
+      block_new_opcodes(parser.block, OP_LOCAL_GET, local);
+      return parser.locals[local].value;
     }
 
     // if we haven't found a local, check the globals
@@ -562,7 +552,11 @@ static Value assignment() {
 }
 
 /**
- * @brief Parses an expression.
+ * @brief Expression level parsing, handles operators and expressions based on
+ * precedence.
+ *
+ * @param prec the precedence to handle
+ * @return Value the result of the expression
  */
 static Value expression(enum Precedence prec) {
   Value val = value_new_null();
@@ -731,6 +725,98 @@ static void statement_while() {
 }
 
 /**
+ * @brief Parses a for statement, initializer, conditional, and post expression.
+ *
+ */
+static void statement_for() {
+  consume(TOKEN_LPAREN);
+  parser.scope++;
+
+  // initializer
+  if (match(TOKEN_SEMICOLON)) {
+    // no initializer
+  } else if (match(TOKEN_I32) || match(TOKEN_BOOL) || match(TOKEN_STR)) {
+    statement_declaration();
+    if (parser.previous.type != TOKEN_SEMICOLON)
+      consume(TOKEN_SEMICOLON);
+  } else {
+    expression(PREC_ASSIGNMENT);
+    consume(TOKEN_SEMICOLON);
+  }
+
+  // conditional
+  int start = parser.block->opcodes->size;
+  int conditionalJump = -1;
+  Value condition = value_new_boolean(true);
+  if (match(TOKEN_SEMICOLON)) {
+    // no conditional
+    conditionalJump = parser.block->opcodes->size;
+  } else {
+    condition = expression(PREC_ASSIGNMENT);
+    if (condition.type != VAL_BOOL) {
+      parse_error("Expected value type VAL_BOOL but got ");
+      value_type_print(condition.type);
+      printf("\n");
+      return;
+    }
+    consume(TOKEN_SEMICOLON);
+    block_new_opcodes_3(parser.block, OP_CJUMPF, 0xFF, 0xFF);
+    conditionalJump = parser.block->opcodes->size - 2;
+  }
+  block_new_opcodes_3(parser.block, OP_JUMP, 0xFF, 0xFF);
+
+  int postPos = parser.block->opcodes->size - 2;
+
+  // post expression
+  if (match(TOKEN_RPAREN)) {
+    // no post expression
+  } else {
+    expression(PREC_ASSIGNMENT);
+    consume(TOKEN_RPAREN);
+  }
+
+  // jump back to the conditional
+  {
+    int jsize = parser.block->opcodes->size - start + 2;
+    uint16_t size = jsize < UINT16_MAX ? jsize : UINT16_MAX;
+    block_new_opcodes_3(parser.block, OP_JUMP_BACK, (size >> 8) & 0xFF,
+                        size & 0xFF);
+  }
+
+  {
+    int postJump = parser.block->opcodes->size - conditionalJump - 4;
+    uint16_t size = postJump < UINT16_MAX ? postJump : UINT16_MAX;
+    (*(uint8_t*)parser.block->opcodes->data[conditionalJump + 3]) =
+        (size >> 8) & 0xFF;
+    (*(uint8_t*)parser.block->opcodes->data[conditionalJump + 4]) = size & 0xFF;
+  }
+
+  int end = parser.block->opcodes->size;
+
+  statement();
+
+  // jump back to the post condition
+  {
+    int jsize = parser.block->opcodes->size - postPos - 3;
+    uint16_t size = jsize < UINT16_MAX ? jsize : UINT16_MAX;
+    block_new_opcodes_3(parser.block, OP_JUMP_BACK, (size >> 8) & 0xFF,
+                        size & 0xFF);
+  }
+
+  // patch the conditional jump to jump to the end of the block
+  if (conditionalJump != -1) {
+    int jump = parser.block->opcodes->size - conditionalJump - 1;
+    uint16_t size = jump < UINT16_MAX ? jump : UINT16_MAX;
+    (*(uint8_t*)parser.block->opcodes->data[conditionalJump]) =
+        (size >> 8) & 0xFF;
+    (*(uint8_t*)parser.block->opcodes->data[conditionalJump + 1]) = size & 0xFF;
+  }
+
+  parser.scope--;
+  pop_locals();
+}
+
+/**
  * @brief Parses a block.
  *
  */
@@ -756,6 +842,8 @@ void statement() {
     statement_declaration();
   } else if (match(TOKEN_WHILE)) {
     statement_while();
+  } else if (match(TOKEN_FOR)) {
+    statement_for();
   } else if (match(TOKEN_LBRACE)) {
     block();
   } else {
