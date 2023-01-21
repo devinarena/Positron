@@ -774,28 +774,31 @@ static void statement_for() {
     consume(TOKEN_RPAREN);
   }
 
-  // jump back to the conditional
+  // jump back to the conditional after the post condition
   {
-    int jsize = parser.block->opcodes->size - start + 2;
+    int jsize = parser.block->opcodes->size - start + 2;  // +2 for jump codes
     uint16_t size = jsize < UINT16_MAX ? jsize : UINT16_MAX;
     block_new_opcodes_3(parser.block, OP_JUMP_BACK, (size >> 8) & 0xFF,
                         size & 0xFF);
   }
-
-  if (conditionalJump != -1) {
-    int postJump = parser.block->opcodes->size - conditionalJump - 4;
+  {
+    int postJump;
+    if (conditionalJump == -1) {
+      postJump = parser.block->opcodes->size - postPos - 1;
+    } else
+      postJump = parser.block->opcodes->size - conditionalJump - 4;
     uint16_t size = postJump < UINT16_MAX ? postJump : UINT16_MAX;
     (*(uint8_t*)parser.block->opcodes->data[postPos]) = (size >> 8) & 0xFF;
     (*(uint8_t*)parser.block->opcodes->data[postPos + 1]) = size & 0xFF;
   }
 
-  int end = parser.block->opcodes->size;
-
   statement();
+
+  int end = parser.block->opcodes->size;
 
   // jump back to the post condition
   {
-    int jsize = parser.block->opcodes->size - postPos;
+    int jsize = end - postPos;
     uint16_t size = jsize < UINT16_MAX ? jsize : UINT16_MAX;
     block_new_opcodes_3(parser.block, OP_JUMP_BACK, (size >> 8) & 0xFF,
                         size & 0xFF);
@@ -842,6 +845,15 @@ void statement() {
     statement_while();
   } else if (match(TOKEN_FOR)) {
     statement_for();
+  } else if (match(TOKEN_EXIT)) {
+    Value res = expression(PREC_ASSIGNMENT);
+    if (res.type != VAL_INTEGER_32) {
+      parse_error("Expected value type VAL_INTEGER_32 but got ");
+      value_type_print(res.type);
+      printf("\n");
+      return;
+    }
+    block_new_opcode(parser.block, OP_EXIT);
   } else if (match(TOKEN_LBRACE)) {
     block();
   } else {

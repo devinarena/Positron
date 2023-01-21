@@ -67,8 +67,9 @@ static Value peek_stack(int depth) {
  * @brief Interprets the emitted opcodes of a block.
  *
  * @param block the block to interpret
+ * @return InterpretResult the result of the interpretation
  */
-void interpret(Block* block) {
+InterpretResult interpret(Block* block) {
   interpreter_init();
 
   while (interpreter.ip < block->opcodes->size) {
@@ -91,6 +92,10 @@ void interpret(Block* block) {
         push_stack(v);
         interpreter.ip++;
         break;
+      }
+      case OP_EXIT: {
+        Value res = pop_stack();
+        return (InterpretResult)res.data.integer_32;
       }
       case OP_PRINT: {
         Value v = pop_stack();
@@ -288,6 +293,8 @@ void interpret(Block* block) {
   if (DEBUG_MODE)
     interpreter_print(block);
 #endif
+
+  return INTERPRET_OK;
 }
 
 /**

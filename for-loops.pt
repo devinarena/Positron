@@ -1,0 +1,27 @@
+
+for (i32 a = 0; a < 10; a = a + 1) {
+    print a
+}
+
+i32 b = 0
+
+// test without init
+for (; b < 5; b = b + 1) {
+    print b
+}
+
+// test without post expression
+for (i32 c = 0; c < 5; ) {
+    print c
+    c = c + 1
+}
+
+// test without condition (test manually)
+for (i32 c = 0; ; c = c + 1) {
+    print c
+}
+
+// test manually
+// for(;;) {
+//     print "Hello world"
+// }

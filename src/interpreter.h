@@ -14,6 +14,11 @@
 #include "dyn_list.h"
 #include "hash_table.h"
 
+typedef enum InterpretResult {
+    INTERPRET_OK,
+    INTERPRET_FAIL,
+} InterpretResult;
+
 typedef struct Interpreter {
     size_t ip;
     int sp;
@@ -24,7 +29,7 @@ typedef struct Interpreter {
 // Initialize the interpreter's memory.
 void interpreter_init();
 // Interpret the emitted opcodes of a block.
-void interpret(Block* block);
+InterpretResult interpret(Block* block);
 // Prints the interpreter.
 void interpreter_print(Block* block);
 // Frees the interpreter's memory.

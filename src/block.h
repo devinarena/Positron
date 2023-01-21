@@ -21,6 +21,7 @@ enum OpCode {
     OP_NOP,
     OP_POP,
     OP_DUPE,
+    OP_EXIT,
     OP_PRINT,
     OP_GLOBAL_DEFINE,
     OP_GLOBAL_SET,

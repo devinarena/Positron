@@ -51,6 +51,8 @@ int main(int argc, const char* argv[]) {
   Block* block = block_new(path);
   parser_init(block);
 
+  InterpretResult result;
+
   if (parse()) {
 #ifdef POSITRON_DEBUG
     if (DEBUG_MODE)
@@ -59,7 +61,7 @@ int main(int argc, const char* argv[]) {
 
     interpreter_init();
 
-    interpret(block);
+    result = interpret(block);
 
     interpreter_free();
   }
@@ -68,5 +70,5 @@ int main(int argc, const char* argv[]) {
   block_free(block);
   free((void*)source);
 
-  return 0;
+  return (int)result;
 }

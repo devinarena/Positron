@@ -141,6 +141,9 @@ size_t block_print_opcode(Block* block, size_t index) {
     case OP_DUPE:
       printf("OP_DUPE");
       return 1;
+    case OP_EXIT:
+      printf("OP_EXIT");
+      return 1;
     case OP_PRINT:
       printf("OP_PRINT");
       return 1;

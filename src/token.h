@@ -20,6 +20,7 @@ enum TokenType {
   
   // keywords
   TOKEN_BOOL,
+  TOKEN_EXIT,
   TOKEN_FALSE,
   TOKEN_FOR,
   TOKEN_I32,
