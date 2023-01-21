@@ -750,7 +750,6 @@ static void statement_for() {
   Value condition = value_new_boolean(true);
   if (match(TOKEN_SEMICOLON)) {
     // no conditional
-    conditionalJump = parser.block->opcodes->size;
   } else {
     condition = expression(PREC_ASSIGNMENT);
     if (condition.type != VAL_BOOL) {
@@ -783,12 +782,11 @@ static void statement_for() {
                         size & 0xFF);
   }
 
-  {
+  if (conditionalJump != -1) {
     int postJump = parser.block->opcodes->size - conditionalJump - 4;
     uint16_t size = postJump < UINT16_MAX ? postJump : UINT16_MAX;
-    (*(uint8_t*)parser.block->opcodes->data[conditionalJump + 3]) =
-        (size >> 8) & 0xFF;
-    (*(uint8_t*)parser.block->opcodes->data[conditionalJump + 4]) = size & 0xFF;
+    (*(uint8_t*)parser.block->opcodes->data[postPos]) = (size >> 8) & 0xFF;
+    (*(uint8_t*)parser.block->opcodes->data[postPos + 1]) = size & 0xFF;
   }
 
   int end = parser.block->opcodes->size;
@@ -797,7 +795,7 @@ static void statement_for() {
 
   // jump back to the post condition
   {
-    int jsize = parser.block->opcodes->size - postPos - 3;
+    int jsize = parser.block->opcodes->size - postPos;
     uint16_t size = jsize < UINT16_MAX ? jsize : UINT16_MAX;
     block_new_opcodes_3(parser.block, OP_JUMP_BACK, (size >> 8) & 0xFF,
                         size & 0xFF);
