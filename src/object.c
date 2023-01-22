@@ -17,7 +17,7 @@
  * @param type the type of the object
  * @return Object* a pointer to the newly allocated object
  */
-PObject* p_object_new(enum PObjectType type) {
+PObject* p_object_new(PObjectType type) {
   PObject* object = malloc(sizeof(PObject));
   object->type = type;
   return object;
@@ -52,10 +52,30 @@ PString* p_object_string_new(const char* data) {
   return string;
 }
 
-void p_object_type_print(enum PObjectType type) {
+/**
+ * @brief Allocates and returns a new function object.
+ */
+PFunction* p_object_function_new(PString* name, Value returnType) {
+  PFunction* function = malloc(sizeof(PFunction));
+  function->base = *p_object_new(P_OBJ_FUNCTION);
+  function->name = name;
+  function->block = block_new();
+  function->returnType = returnType;
+  return function;
+}
+
+/**
+ * @brief Outputs the objects type to stdout.
+ * 
+ * @param type the type of the object
+ */
+void p_object_type_print(PObjectType type) {
   switch (type) {
     case P_OBJ_STRING:
       printf("string");
+      break;
+    case P_OBJ_FUNCTION:
+      printf("object");
       break;
     default:
       printf("object");
@@ -71,6 +91,9 @@ void p_object_print(PObject* object) {
     case P_OBJ_STRING:
       printf(((PString*)object)->value);
       break;
+    case P_OBJ_FUNCTION:
+      printf("<function %s>", ((PFunction*)object)->name->value);
+      break;
     default:
       printf("<object %p>", object);
       break;
@@ -85,6 +108,12 @@ void p_object_free(PObject* object) {
     case P_OBJ_STRING: {
       PString* string = (PString*)object;
       free(string->value);
+      break;
+    }
+    case P_OBJ_FUNCTION: {
+      PFunction* function = (PFunction*)object;
+      p_object_free((PObject*)function->name);
+      block_free(function->block);
       break;
     }
     default:

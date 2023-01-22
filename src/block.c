@@ -14,12 +14,10 @@
 /**
  * @brief Allocates and returns a pointer to a new block.
  *
- * @param name the name of the block
  * @return Block* a pointer to the newly allocated block
  */
-Block* block_new(const char* name) {
+Block* block_new() {
   Block* block = malloc(sizeof(Block));
-  block->name = name;
   block->opcodes = dyn_list_new(free);
   block->constants = dyn_list_new((void*)(void*)value_free);
   return block;
@@ -97,7 +95,7 @@ uint8_t block_new_constant(Block* block, Value* constant) {
  * @param block the block to print
  */
 void block_print(Block* block) {
-  printf("========== Block: %s ==========\n", block->name);
+  printf("========== Block ==========\n");
   printf("========== Opcodes ==========\n");
   for (size_t i = 0; i < block->opcodes->size;) {
     printf("%.8d: ", (int)i);
@@ -119,7 +117,6 @@ void block_print(Block* block) {
  * @param block
  */
 void block_free(Block* block) {
-  free((char*)block->name);
   dyn_list_free(block->opcodes);
   dyn_list_free(block->constants);
   free(block);
@@ -143,6 +140,12 @@ size_t block_print_opcode(Block* block, size_t index) {
       return 1;
     case OP_EXIT:
       printf("OP_EXIT");
+      return 1;
+    case OP_RETURN:
+      printf("OP_RETURN");
+      return 1;
+    case OP_CALL:
+      printf("OP_CALL");
       return 1;
     case OP_PRINT:
       printf("OP_PRINT");

@@ -103,32 +103,34 @@ static Token identifier() {
   const char* schar = lexer.input + lexer.index;
   int start = lexer.index;
   lexer.index++;
-  while (isalnum(peek()))
+  while (isalnum(peek()) || peek() == '_')
     lexer.index++;
 
   int length = lexer.index - start;
 
-  if (strncmp(schar, "bool", 4) == 0) {
+  if (length == 4 && strncmp(schar, "bool", length) == 0) {
     return make_token(TOKEN_BOOL, schar, length);
-  } else if (strncmp(schar, "exit", 4) == 0) {
+  } else if (length == 4 && strncmp(schar, "exit", length) == 0) {
     return make_token(TOKEN_EXIT, schar, length);
-  } else if (strncmp(schar, "false", 5) == 0) {
+  } else if (length == 5 && strncmp(schar, "false", length) == 0) {
     return make_token(TOKEN_FALSE, schar, length);
-  } else if (strncmp(schar, "for", 3) == 0) {
+  } else if (length == 3 && strncmp(schar, "for", length) == 0) {
     return make_token(TOKEN_FOR, schar, length);
-  } else if (strncmp(schar, "i32", 3) == 0) {
+  } else if (length == 3 && strncmp(schar, "i32", length) == 0) {
     return make_token(TOKEN_I32, schar, length);
-  } else if (strncmp(schar, "if", 2) == 0) {
+  } else if (length == 2 && strncmp(schar, "if", length) == 0) {
     return make_token(TOKEN_IF, schar, length);
-  } else if (strncmp(schar, "null", 4) == 0) {
+  } else if (length == 4 && strncmp(schar, "null", length) == 0) {
     return make_token(TOKEN_NULL, schar, length);
-  } else if (strncmp(schar, "print", 5) == 0) {
+  } else if (length == 5 && strncmp(schar, "print", length) == 0) {
     return make_token(TOKEN_PRINT, schar, length);
-  } else if (strncmp(schar, "str", 3) == 0) {
+  } else if (length == 3 && strncmp(schar, "str", length) == 0) {
     return make_token(TOKEN_STR, schar, length);
-  } else if (strncmp(schar, "true", 4) == 0) {
+  } else if (length == 4 && strncmp(schar, "true", length) == 0) {
     return make_token(TOKEN_TRUE, schar, length);
-  } else if (strncmp(schar, "while", 5) == 0) {
+  } else if (length == 2 && strncmp(schar, "vd", length) == 0) {
+    return make_token(TOKEN_VOID, schar, length);
+  } else if (length == 5 && strncmp(schar, "while", length) == 0) {
     return make_token(TOKEN_WHILE, schar, length);
   }
 

@@ -13,7 +13,8 @@
 
 extern bool DEBUG_MODE;
 
-#define STACK_SIZE 256
+#define STACK_SIZE UINT8_MAX
+#define MAX_FRAMES UINT8_MAX
 
 #define POSITRON_DEBUG
 

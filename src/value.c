@@ -10,6 +10,7 @@
 #include <stdio.h>
 
 #include "value.h"
+#include "object.h"
 
 /**
  * @brief Returns the truthiness of a value.
@@ -65,6 +66,7 @@ Value* value_clone(Value* value) {
  */
 enum ValueType value_type_from_token_type(enum TokenType type) {
   switch (type) {
+    case TOKEN_VOID:
     case TOKEN_NULL:
       return VAL_NULL;
     case TOKEN_TRUE:

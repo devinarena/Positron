@@ -13,23 +13,33 @@
 #include "block.h"
 #include "dyn_list.h"
 #include "hash_table.h"
+#include "object.h"
+#include "value.h"
 
 typedef enum InterpretResult {
     INTERPRET_OK,
     INTERPRET_FAIL,
 } InterpretResult;
 
-typedef struct Interpreter {
+typedef struct CallFrame {
     size_t ip;
+    PFunction* function;
+    Value* slots;
+    size_t slotCount;
+} CallFrame;
+
+typedef struct Interpreter {
+    int fp;
     int sp;
     Value stack[STACK_SIZE];
     HashTable globals;
+    CallFrame frames[MAX_FRAMES];
 } Interpreter;
 
 // Initialize the interpreter's memory.
 void interpreter_init();
-// Interpret the emitted opcodes of a block.
-InterpretResult interpret(Block* block);
+// Interpret the emitted opcodes of a function.
+InterpretResult interpret(PFunction* function);
 // Prints the interpreter.
 void interpreter_print(Block* block);
 // Frees the interpreter's memory.

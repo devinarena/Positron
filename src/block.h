@@ -22,6 +22,8 @@ enum OpCode {
     OP_POP,
     OP_DUPE,
     OP_EXIT,
+    OP_RETURN,
+    OP_CALL,
     OP_PRINT,
     OP_GLOBAL_DEFINE,
     OP_GLOBAL_SET,
@@ -54,14 +56,13 @@ enum OpCode {
     OP_CJUMPT,
 };
 
-typedef struct {
-    const char* name;
+typedef struct Block {
     dyn_list* opcodes;
     dyn_list* constants;
 } Block;
 
 // allocates and returns a pointer to a new block
-Block* block_new(const char* name);
+Block* block_new();
 // adds a new opcode to a block
 void block_new_opcode(Block* block, uint8_t opcode);
 // Adds two new opcodes to a block

@@ -12,6 +12,7 @@
         "type_traits": "c",
         "cstdarg": "c",
         "positron.h": "c",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "stdint.h": "c"
     }
 }

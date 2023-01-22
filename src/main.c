@@ -48,26 +48,21 @@ int main(int argc, const char* argv[]) {
   const char* source = read_file(path);
 
   lexer_init(source);
-  Block* block = block_new(path);
-  parser_init(block);
+  parser_init(path);
 
   InterpretResult result;
 
-  if (parse()) {
-#ifdef POSITRON_DEBUG
-    if (DEBUG_MODE)
-      block_print(block);
-#endif
+  PFunction* script = parse_script(path);
 
+  if (script) {
     interpreter_init();
 
-    result = interpret(block);
+    result = interpret(script);
 
     interpreter_free();
   }
 
   parser_free();
-  block_free(block);
   free((void*)source);
 
   return (int)result;

@@ -12,7 +12,8 @@
 #include <stdbool.h>
 
 #include "token.h"
-#include "object.h"
+
+typedef struct PObject PObject;
 
 typedef enum ValueType {
   VAL_NULL,
@@ -67,7 +68,7 @@ void value_free(Value* value);
  *
  * @param val a pointer to the object
  */
-#define value_new_object(val) ((Value){.type = VAL_OBJ, .data.reference = val})
+#define value_new_object(val) ((Value){.type = VAL_OBJ, .data.reference = (val)})
 
 /**
  * @brief Returns a new boolean value.

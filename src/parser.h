@@ -40,7 +40,7 @@ typedef struct Local {
 typedef struct Parser {
     Token current;
     Token previous;
-    Block* block;
+    PFunction* function;
     HashTable globals;
     size_t scope;
     Local locals[MAX_LOCALS];
@@ -48,11 +48,14 @@ typedef struct Parser {
     bool had_error;
 } Parser;
 
-// initializes the parser with the given block
-void parser_init(Block* block);
+// initializes the parser with the given char* name
+void parser_init();
 // produces a parse error and triggers synchronization
 void parse_error(const char* format, ...);
-bool parse();
+// parses a script
+PFunction* parse_script(char* name);
+// parses a function
+PFunction* parse_function(PString* name, Value returnType);
 // frees the parser's memory
 void parser_free();
 
