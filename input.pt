@@ -1,6 +1,8 @@
 
-vd test(i32 x, i32 y) {
-    print x + y
+vd factorial(i32 n) {
+    if (n <= 1) {
+        print 1
+    }
 }
 
-test(5, 8)
+factorial(1)
