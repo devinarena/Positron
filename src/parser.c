@@ -663,11 +663,30 @@ static void statement_if() {
   block_new_opcodes_3(parser.function->block, OP_CJUMPF, 0xFF, 0xFF);
   size_t start = parser.function->block->opcodes->size - 2;
   statement();
-  int jump = parser.function->block->opcodes->size - start - 1;
-  uint16_t size = jump < UINT16_MAX ? jump : UINT16_MAX;
-  (*(uint8_t*)parser.function->block->opcodes->data[start]) =
-      (size >> 8) & 0xFF;
-  (*(uint8_t*)parser.function->block->opcodes->data[start + 1]) = size & 0xFF;
+  if (match(TOKEN_ELSE)) {
+    block_new_opcodes_3(parser.function->block, OP_JUMP, 0xFF, 0xFF);
+    size_t start2 = parser.function->block->opcodes->size - 2;
+
+    int jump = parser.function->block->opcodes->size - start - 1;
+    uint16_t size = jump < UINT16_MAX ? jump : UINT16_MAX;
+    (*(uint8_t*)parser.function->block->opcodes->data[start]) =
+        (size >> 8) & 0xFF;
+    (*(uint8_t*)parser.function->block->opcodes->data[start + 1]) = size & 0xFF;
+
+    statement();
+    jump = parser.function->block->opcodes->size - start2 - 1;
+    size = jump < UINT16_MAX ? jump : UINT16_MAX;
+    (*(uint8_t*)parser.function->block->opcodes->data[start2]) =
+        (size >> 8) & 0xFF;
+    (*(uint8_t*)parser.function->block->opcodes->data[start2 + 1]) =
+        size & 0xFF;
+  } else {
+    int jump = parser.function->block->opcodes->size - start - 1;
+    uint16_t size = jump < UINT16_MAX ? jump : UINT16_MAX;
+    (*(uint8_t*)parser.function->block->opcodes->data[start]) =
+        (size >> 8) & 0xFF;
+    (*(uint8_t*)parser.function->block->opcodes->data[start + 1]) = size & 0xFF;
+  }
 }
 
 /**
@@ -925,20 +944,22 @@ static void statement_function() {
       consume(TOKEN_COMMA);
   }
   parser.scope--;
-  parse_function(function);
+
   Value fval = value_new_object((PObject*)function);
-
-  if (function->returnType.type != returnType) {
-    parse_error("Function '%s' return type does not match declaration\n",
-                fname->value);
-  }
-
+  // TODO: need support for local functions
   if (!parser.scope) {
     // global function
     if (!hash_table_set(&parser.globals, fname->value, &fval))
       parse_error("Global function '%s' already defined\n", fname->value);
   } else {
     parse_error("Local functions not yet supported\n");
+  }
+
+  parse_function(function);
+
+  if (function->returnType.type != returnType) {
+    parse_error("Function '%s' return type does not match declaration\n",
+                fname->value);
   }
 
   uint8_t index = block_new_constant(parser.function->block, &fnameVal);

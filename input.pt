@@ -2,7 +2,10 @@
 vd factorial(i32 n) {
     if (n <= 1) {
         print 1
+    } else {
+        print n
+        factorial(n - 1)
     }
 }
 
-factorial(1)
+factorial(2)
