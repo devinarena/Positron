@@ -1,8 +1,6 @@
 
-vd print_nums() {
-    print "123"
+vd test(i32 x, i32 y) {
+    print x + y
 }
 
-print "Hello, world!"
-
-print_nums()
+test(5, 8)

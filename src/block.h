@@ -23,7 +23,6 @@ enum OpCode {
     OP_DUPE,
     OP_EXIT,
     OP_RETURN,
-    OP_CALL,
     OP_PRINT,
     OP_GLOBAL_DEFINE,
     OP_GLOBAL_SET,
@@ -48,6 +47,7 @@ enum OpCode {
 
     // Two bytes
     OP_CONSTANT,
+    OP_CALL,
 
     // Three bytes
     OP_JUMP,

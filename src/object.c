@@ -93,7 +93,9 @@ void p_object_print(PObject* object) {
       printf(((PString*)object)->value);
       break;
     case P_OBJ_FUNCTION:
-      printf("<function %s>", ((PFunction*)object)->name->value);
+      printf("<");
+      value_print(&(((PFunction*)object)->returnType));
+      printf(" %s>", ((PFunction*)object)->name->value);
       break;
     default:
       printf("<object %p>", object);

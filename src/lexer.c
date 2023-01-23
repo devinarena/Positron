@@ -286,6 +286,11 @@ Token lexer_next_token() {
       printf("Unexpected character: %c\n", c);
       exit(1);
     }
+    case ',': {
+      token = make_token(TOKEN_COMMA, schar, 1);
+      lexer.index++;
+      break;
+    }
     case '\0': {
       token = make_token(TOKEN_EOF, schar, 1);
       lexer.index++;

@@ -93,14 +93,12 @@ InterpretResult interpret(PFunction* function) {
   push_frame((CallFrame){.ip = 0, .function = function});
   CallFrame* frame = &interpreter.frames[interpreter.fp - 1];
 
-  while (frame->ip <
-         frame->function->block->opcodes->size) {
+  while (frame->ip < frame->function->block->opcodes->size) {
 #ifdef POSITRON_DEBUG
     if (DEBUG_MODE)
       interpreter_print();
 #endif
-    switch (*(uint8_t*)frame->function->block->opcodes
-                 ->data[frame->ip]) {
+    switch (*(uint8_t*)frame->function->block->opcodes->data[frame->ip]) {
       case OP_NOP: {
         frame->ip++;
         break;
@@ -121,15 +119,18 @@ InterpretResult interpret(PFunction* function) {
         return (InterpretResult)res.data.integer_32;
       }
       case OP_CALL: {
-        Value fun = pop_stack();
+        uint8_t arg_count =
+            *(uint8_t*)frame->function->block->opcodes->data[frame->ip + 1];
+        Value fun = peek_stack(arg_count);
         if (fun.type != VAL_OBJ || fun.data.reference->type != P_OBJ_FUNCTION) {
-          printf("Cannot call non-frame->function");
+          printf("Cannot call non-function");
           exit(1);
         }
-        frame->ip++;
+        frame->ip += 2;
         push_frame(
             (CallFrame){.ip = 0, .function = (PFunction*)fun.data.reference});
         frame = &interpreter.frames[interpreter.fp - 1];
+        frame->slots = &interpreter.stack[interpreter.sp - arg_count];
         break;
       }
       case OP_RETURN: {
@@ -240,9 +241,10 @@ InterpretResult interpret(PFunction* function) {
         break;
       }
       case OP_CONSTANT: {
-        uint8_t index = *(uint8_t*)frame->function->block->opcodes
-                             ->data[++frame->ip];
-        Value constant = *(Value*)frame->function->block->constants->data[index];
+        uint8_t index =
+            *(uint8_t*)frame->function->block->opcodes->data[++frame->ip];
+        Value constant =
+            *(Value*)frame->function->block->constants->data[index];
         push_stack(constant);
         frame->ip++;
         break;
@@ -270,16 +272,16 @@ InterpretResult interpret(PFunction* function) {
         break;
       }
       case OP_LOCAL_GET: {
-        uint8_t index = *(uint8_t*)frame->function->block->opcodes
-                             ->data[++frame->ip];
-        push_stack(interpreter.stack[index]);
+        uint8_t index =
+            *(uint8_t*)frame->function->block->opcodes->data[++frame->ip];
+        push_stack(frame->slots[index]);
         frame->ip++;
         break;
       }
       case OP_LOCAL_SET: {
-        uint8_t index = *(uint8_t*)frame->function->block->opcodes
-                             ->data[++frame->ip];
-        interpreter.stack[index] = peek_stack(0);
+        uint8_t index =
+            *(uint8_t*)frame->function->block->opcodes->data[++frame->ip];
+        frame->slots[index] = peek_stack(0);
         if (interpreter.sp != 1)
           pop_stack();
         frame->ip++;
@@ -287,10 +289,10 @@ InterpretResult interpret(PFunction* function) {
       }
       case OP_CJUMPF: {
         Value condition = pop_stack();
-        uint8_t high = *(uint8_t*)frame->function->block->opcodes
-                            ->data[++frame->ip];
-        uint8_t low = *(uint8_t*)frame->function->block->opcodes
-                           ->data[++frame->ip];
+        uint8_t high =
+            *(uint8_t*)frame->function->block->opcodes->data[++frame->ip];
+        uint8_t low =
+            *(uint8_t*)frame->function->block->opcodes->data[++frame->ip];
         uint16_t offset = (high << 8) | low;
         if (condition.data.boolean == false) {
           frame->ip += offset;
@@ -301,10 +303,10 @@ InterpretResult interpret(PFunction* function) {
       }
       case OP_CJUMPT: {
         Value condition = pop_stack();
-        uint8_t high = *(uint8_t*)frame->function->block->opcodes
-                            ->data[++frame->ip];
-        uint8_t low = *(uint8_t*)frame->function->block->opcodes
-                           ->data[++frame->ip];
+        uint8_t high =
+            *(uint8_t*)frame->function->block->opcodes->data[++frame->ip];
+        uint8_t low =
+            *(uint8_t*)frame->function->block->opcodes->data[++frame->ip];
         uint16_t offset = (high << 8) | low;
         if (condition.data.boolean == true) {
           frame->ip += offset;
@@ -314,27 +316,26 @@ InterpretResult interpret(PFunction* function) {
         break;
       }
       case OP_JUMP: {
-        uint8_t high = *(uint8_t*)frame->function->block->opcodes
-                            ->data[++frame->ip];
-        uint8_t low = *(uint8_t*)frame->function->block->opcodes
-                           ->data[++frame->ip];
+        uint8_t high =
+            *(uint8_t*)frame->function->block->opcodes->data[++frame->ip];
+        uint8_t low =
+            *(uint8_t*)frame->function->block->opcodes->data[++frame->ip];
         uint16_t offset = (high << 8) | low;
         frame->ip += offset;
         break;
       }
       case OP_JUMP_BACK: {
-        uint8_t high = *(uint8_t*)frame->function->block->opcodes
-                            ->data[++frame->ip];
-        uint8_t low = *(uint8_t*)frame->function->block->opcodes
-                           ->data[++frame->ip];
+        uint8_t high =
+            *(uint8_t*)frame->function->block->opcodes->data[++frame->ip];
+        uint8_t low =
+            *(uint8_t*)frame->function->block->opcodes->data[++frame->ip];
         uint16_t offset = (high << 8) | low;
         frame->ip -= offset;
         break;
       }
       default: {
         printf("Unknown opcode: %d\n",
-               *(uint8_t*)frame->function->block->opcodes
-                    ->data[frame->ip]);
+               *(uint8_t*)frame->function->block->opcodes->data[frame->ip]);
         exit(1);
       }
     }
@@ -364,10 +365,14 @@ void interpreter_print() {
   }
   printf("\nstack: ");
   for (int i = 0; i < interpreter.sp; i++) {
+    if (i == frame->slots - interpreter.stack)
+      printf("{");
     Value value = interpreter.stack[i];
     printf("[");
     value_print(&value);
     printf("]");
+    if (i == frame->slots - interpreter.stack)
+      printf("}");
   }
   printf("\nGlobals: ");
   hash_table_print(&interpreter.globals);

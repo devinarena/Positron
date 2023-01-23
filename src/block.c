@@ -144,9 +144,6 @@ size_t block_print_opcode(Block* block, size_t index) {
     case OP_RETURN:
       printf("OP_RETURN");
       return 1;
-    case OP_CALL:
-      printf("OP_CALL");
-      return 1;
     case OP_PRINT:
       printf("OP_PRINT");
       return 1;
@@ -202,6 +199,9 @@ size_t block_print_opcode(Block* block, size_t index) {
       return 1;
     case OP_CONSTANT:
       printf("OP_CONSTANT [%d]", *(uint8_t*)block->opcodes->data[index + 1]);
+      return 2;
+    case OP_CALL:
+      printf("OP_CALL [%d]", *(uint8_t*)block->opcodes->data[index + 1]);
       return 2;
     case OP_LOCAL_GET: {
       uint8_t slot = *(uint8_t*)block->opcodes->data[index + 1];

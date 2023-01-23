@@ -138,6 +138,7 @@ static void synchronize() {
       case TOKEN_IF:
       case TOKEN_WHILE:
       case TOKEN_FOR:
+      case TOKEN_VOID:
         return;
       default:
         break;
@@ -553,15 +554,46 @@ static Value assignment() {
 }
 
 static Value call(Value* lhs) {
+  PFunction* func = TO_FUNCTION(*lhs);
   if (lhs->type != VAL_OBJ || lhs->data.reference->type != P_OBJ_FUNCTION) {
     parse_error("Expected function but got ");
     value_type_print(lhs->type);
     printf("\n");
     return value_new_null();
   }
+  size_t argc = 0;
+  while (!check(TOKEN_RPAREN)) {
+    if (argc > 0) {
+      consume(TOKEN_COMMA);
+    }
+    Value arg = expression(PREC_ASSIGNMENT);
+    if (arg.type != func->parameters[argc].type) {
+      parse_error("Expected argument of type ");
+      value_type_print(func->parameters[argc++].type);
+      printf(" but got ");
+      value_type_print(arg.type);
+      printf("\n");
+      return value_new_null();
+    }
+    argc++;
+  }
+  if (argc != func->arity) {
+    parse_error("Function '");
+    p_object_print((PObject*)func);
+    printf("' expects %lld arguments but got %lld\n", func->arity, argc);
+    return value_new_null();
+  }
+  if (argc > 255) {
+    parse_error("Cannot call function with more than 255 arguments\n");
+    return value_new_null();
+  }
   consume(TOKEN_RPAREN);
-  PFunction* func = TO_FUNCTION(*lhs);
-  block_new_opcode(parser.function->block, OP_CALL);
+  block_new_opcodes(parser.function->block, OP_CALL, argc);
+
+  for (size_t i = 0; i < func->arity + 1; i++) {
+    block_new_opcode(parser.function->block, OP_POP);
+  }
+
   return func->returnType;
 }
 
@@ -873,6 +905,7 @@ static void statement_function() {
   Value fnameVal = value_new_object((PObject*)fname);
   PFunction* function = p_object_function_new(fname, value_new_null());
 
+  parser.scope++;
   while (!match(TOKEN_RPAREN)) {
     if (match(TOKEN_I32) || match(TOKEN_BOOL) || match(TOKEN_STR)) {
       ValueType type = value_type_from_token_type(parser.previous.type);
@@ -881,12 +914,17 @@ static void statement_function() {
       size_t length = parser.previous.length;
       PString* pname = p_object_string_new_n(name, length);
       Value pval = value_new_object((PObject*)pname);
+      function->parameters[function->arity++] = (Value){.type = type};
+      new_local(&parser.previous, &function->parameters[function->arity - 1]);
     } else {
-      parse_error("Expected parameter type but got '%.*s'\n",
-                  parser.previous.length, parser.previous.start);
+      parse_error("Expected parameter type but got '");
+      token_type_print(parser.previous.type);
+      printf("'\n");
     }
-    if (!match(TOKEN_RPAREN)) consume(TOKEN_COMMA);
+    if (!check(TOKEN_RPAREN))
+      consume(TOKEN_COMMA);
   }
+  parser.scope--;
   parse_function(function);
   Value fval = value_new_object((PObject*)function);
 
@@ -990,6 +1028,8 @@ PFunction* parse_script(char* name) {
  * @return PFunction* the function that was generated.
  */
 PFunction* parse_function(PFunction* target) {
+  parser.scope++;
+
   consume(TOKEN_LBRACE);
 
   PFunction* enclosing = parser.function;
@@ -1019,5 +1059,7 @@ PFunction* parse_function(PFunction* target) {
     block_print(target->block);
   }
 #endif
+
+  parser.scope--;
   return target;
 }
