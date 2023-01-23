@@ -55,7 +55,7 @@ void parse_error(const char* format, ...);
 // parses a script
 PFunction* parse_script(char* name);
 // parses a function
-PFunction* parse_function(PString* name, Value returnType);
+PFunction* parse_function(PFunction* function);
 // frees the parser's memory
 void parser_free();
 

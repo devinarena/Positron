@@ -39,6 +39,8 @@ typedef struct PFunction {
     PString* name;
     Block* block;
     Value returnType;
+    size_t arity;
+    Value parameters[255];
 } PFunction;
 
 // allocates and returns a new PObject.

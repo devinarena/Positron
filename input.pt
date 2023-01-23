@@ -1,8 +1,8 @@
 
 vd print_nums() {
-    for (i32 i = 0; i < 10; i = i + 1) {
-        print i
-    }
+    print "123"
 }
+
+print "Hello, world!"
 
 print_nums()

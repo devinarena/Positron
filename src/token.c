@@ -148,6 +148,9 @@ void token_type_print(enum TokenType type) {
     case TOKEN_LESS:
       printf("TOKEN_LESS");
       break;
+    case TOKEN_COMMA:
+      printf("TOKEN_COMMA");
+      break;
     case TOKEN_SEMICOLON:
       printf("TOKEN_SEMICOLON");
       break;

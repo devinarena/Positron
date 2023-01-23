@@ -47,6 +47,7 @@ enum TokenType {
   TOKEN_RBRACE,
   TOKEN_GREATER,
   TOKEN_LESS,
+  TOKEN_COMMA,
 
   // double character tokens
   TOKEN_EQUAL_EQUAL,

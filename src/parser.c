@@ -868,11 +868,26 @@ static void statement_function() {
   size_t length = parser.previous.length;
 
   consume(TOKEN_LPAREN);
-  consume(TOKEN_RPAREN);
 
   PString* fname = p_object_string_new_n(name, length);
   Value fnameVal = value_new_object((PObject*)fname);
-  PFunction* function = parse_function(fname, value_new_null());
+  PFunction* function = p_object_function_new(fname, value_new_null());
+
+  while (!match(TOKEN_RPAREN)) {
+    if (match(TOKEN_I32) || match(TOKEN_BOOL) || match(TOKEN_STR)) {
+      ValueType type = value_type_from_token_type(parser.previous.type);
+      consume(TOKEN_IDENTIFIER);
+      const char* name = parser.previous.start;
+      size_t length = parser.previous.length;
+      PString* pname = p_object_string_new_n(name, length);
+      Value pval = value_new_object((PObject*)pname);
+    } else {
+      parse_error("Expected parameter type but got '%.*s'\n",
+                  parser.previous.length, parser.previous.start);
+    }
+    if (!match(TOKEN_RPAREN)) consume(TOKEN_COMMA);
+  }
+  parse_function(function);
   Value fval = value_new_object((PObject*)function);
 
   if (function->returnType.type != returnType) {
@@ -958,7 +973,7 @@ PFunction* parse_script(char* name) {
 
 #ifdef POSITRON_DEBUG
   if (DEBUG_MODE) {
-    printf("::::: FUNCTION: ");
+    printf("\n::::: FUNCTION: ");
     p_object_print((PObject*)parser.function);
     printf(" :::::\n");
     block_print(parser.function->block);
@@ -974,13 +989,12 @@ PFunction* parse_script(char* name) {
  *
  * @return PFunction* the function that was generated.
  */
-PFunction* parse_function(PString* name, Value returnType) {
+PFunction* parse_function(PFunction* target) {
   consume(TOKEN_LBRACE);
 
   PFunction* enclosing = parser.function;
-  PFunction* function = p_object_function_new(name, returnType);
 
-  parser.function = function;
+  parser.function = target;
 
   while (!match(TOKEN_EOF) && !match(TOKEN_RBRACE)) {
     statement();
@@ -999,11 +1013,11 @@ PFunction* parse_function(PString* name, Value returnType) {
 
 #ifdef POSITRON_DEBUG
   if (DEBUG_MODE) {
-    printf("::::: FUNCTION: ");
-    p_object_print((PObject*)function);
+    printf("\n::::: FUNCTION: ");
+    p_object_print((PObject*)target);
     printf(" :::::\n");
-    block_print(function->block);
+    block_print(target->block);
   }
 #endif
-  return function;
+  return target;
 }

@@ -41,7 +41,7 @@ void interpreter_init();
 // Interpret the emitted opcodes of a function.
 InterpretResult interpret(PFunction* function);
 // Prints the interpreter.
-void interpreter_print(Block* block);
+void interpreter_print();
 // Frees the interpreter's memory.
 void interpreter_free();
 

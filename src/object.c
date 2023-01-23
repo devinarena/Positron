@@ -59,6 +59,7 @@ PFunction* p_object_function_new(PString* name, Value returnType) {
   PFunction* function = malloc(sizeof(PFunction));
   function->base = *p_object_new(P_OBJ_FUNCTION);
   function->name = name;
+  function->arity = 0;
   function->block = block_new();
   function->returnType = returnType;
   return function;
