@@ -270,6 +270,5 @@ void hash_table_print(HashTable* table) {
       printf("\n  }\n");
     }
   }
-  printf(" ]\n");
-  printf(" }");
+  printf("]\n");
 }

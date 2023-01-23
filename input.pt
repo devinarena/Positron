@@ -1,11 +1,8 @@
 
-vd factorial(i32 n) {
-    if (n <= 1) {
-        print 1
-    } else {
-        print n
-        factorial(n - 1)
+vd print_n(str text, i32 n) {
+    for (i32 i = 0; i < n; i = i + 1) {
+        print text
     }
 }
 
-factorial(2)
+print_n("Hello", 3)

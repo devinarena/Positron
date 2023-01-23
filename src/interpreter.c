@@ -90,8 +90,10 @@ static void pop_frame() {
 InterpretResult interpret(PFunction* function) {
   interpreter_init();
 
-  push_frame((CallFrame){.ip = 0, .function = function});
+  push_frame(
+      (CallFrame){.ip = 0, .function = function, .slotCount = function->arity});
   CallFrame* frame = &interpreter.frames[interpreter.fp - 1];
+  frame->slots = interpreter.stack;
 
   while (frame->ip < frame->function->block->opcodes->size) {
 #ifdef POSITRON_DEBUG
@@ -131,11 +133,12 @@ InterpretResult interpret(PFunction* function) {
             (CallFrame){.ip = 0, .function = (PFunction*)fun.data.reference});
         frame = &interpreter.frames[interpreter.fp - 1];
         frame->slots = &interpreter.stack[interpreter.sp - arg_count];
+        frame->slotCount = arg_count;
         break;
       }
       case OP_RETURN: {
         Value res = value_new_null();
-        if (interpreter.sp > 0) {
+        if (frame->function->returnType.type != VAL_NULL) {
           res = pop_stack();
         }
         pop_frame();
@@ -143,6 +146,7 @@ InterpretResult interpret(PFunction* function) {
           return INTERPRET_OK;
         }
         frame = &interpreter.frames[interpreter.fp - 1];
+        frame->slots = &interpreter.stack[interpreter.sp];
         push_stack(res);
         break;
       }
@@ -282,7 +286,7 @@ InterpretResult interpret(PFunction* function) {
         uint8_t index =
             *(uint8_t*)frame->function->block->opcodes->data[++frame->ip];
         frame->slots[index] = peek_stack(0);
-        if (interpreter.sp != 1)
+        if (interpreter.sp > (frame->slots - interpreter.stack) + index + 1)
           pop_stack();
         frame->ip++;
         break;
@@ -364,15 +368,19 @@ void interpreter_print() {
     block_print_opcode(frame->function->block, frame->ip);
   }
   printf("\nstack: ");
-  for (int i = 0; i < interpreter.sp; i++) {
-    if (i == frame->slots - interpreter.stack)
-      printf("{");
-    Value value = interpreter.stack[i];
-    printf("[");
-    value_print(&value);
-    printf("]");
-    if (i == frame->slots - interpreter.stack)
-      printf("}");
+  if (interpreter.sp == 0) {
+    printf("{}");
+  } else {
+    for (int i = 0; i < interpreter.sp; i++) {
+      if ((i == 0 && interpreter.fp == 1) ||
+          i == frame->slots - interpreter.stack)
+        printf("{");
+      Value value = interpreter.stack[i];
+      printf("[");
+      value_print(&value);
+      printf("]");
+    }
+    printf("}");
   }
   printf("\nGlobals: ");
   hash_table_print(&interpreter.globals);
