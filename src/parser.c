@@ -453,7 +453,7 @@ static Value factor() {
 static Value term(Value* lhs) {
   enum TokenType op = parser.previous.type;
 
-  Value rhs = factor();
+  Value rhs = expression(PREC_TERM);
   if (lhs->type == VAL_NULL)
     return rhs;
 
@@ -618,6 +618,10 @@ static Value call(Value* lhs) {
   }
   consume(TOKEN_RPAREN);
   block_new_opcodes(parser.function->block, OP_CALL, argc);
+
+  printf("return type: ");
+  value_type_print(func->returnType.type);
+  printf("\n");
 
   return func->returnType;
 }
