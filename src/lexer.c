@@ -124,6 +124,8 @@ static Token identifier() {
     return make_token(TOKEN_IF, schar, length);
   } else if (length == 4 && strncmp(schar, "null", length) == 0) {
     return make_token(TOKEN_NULL, schar, length);
+  } else if (length == 3 && strncmp(schar, "ret", length) == 0) {
+    return make_token(TOKEN_RETURN, schar, length);
   } else if (length == 5 && strncmp(schar, "print", length) == 0) {
     return make_token(TOKEN_PRINT, schar, length);
   } else if (length == 3 && strncmp(schar, "str", length) == 0) {

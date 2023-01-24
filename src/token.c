@@ -100,6 +100,9 @@ void token_type_print(enum TokenType type) {
     case TOKEN_PRINT:
       printf("TOKEN_PRINT");
       break;
+    case TOKEN_RETURN:
+      printf("TOKEN_RETURN");
+      break;
     case TOKEN_STR:
       printf("TOKEN_STR");
       break;

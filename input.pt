@@ -1,8 +1,10 @@
 
-vd print_n(str text, i32 n) {
-    for (i32 i = 0; i < n; i = i + 1) {
-        print text
-    }
+i32 test() {
+    ret 8
 }
 
-print_n("Hello", 3)
+str test2() {
+    ret "Hello world"
+}
+
+print test2()

@@ -94,7 +94,7 @@ void p_object_print(PObject* object) {
       break;
     case P_OBJ_FUNCTION:
       printf("<");
-      value_print(&(((PFunction*)object)->returnType));
+      value_type_print((((PFunction*)object)->returnType).type);
       printf(" %s>", ((PFunction*)object)->name->value);
       break;
     default:

@@ -206,6 +206,53 @@ static int new_local(Token* name, Value* value) {
 }
 
 /**
+ * @brief Type checks two values.
+ *
+ * @param a a pointer to the first value
+ * @param b a pointer to the second value
+ * @param message whether or not to print an error message
+ * @return true if the types match
+ * @return false if the types do not match
+ */
+static bool type_check(Value* a, Value* b, bool message) {
+  if (a->type == VAL_OBJ && b->type == VAL_OBJ) {
+    if (a->data.reference->type == b->data.reference->type)
+      return true;
+  } else if (a->type == b->type)
+    return true;
+  if (message) {
+    parse_error("Type mismatch: received ");
+    value_print(a);
+    printf(" but expected ");
+    value_print(b);
+    printf("\n");
+  }
+  return false;
+}
+
+/**
+ * @brief Type checks a single value.
+ *
+ * @param a a pointer to the value
+ * @param type the type to check against
+ * @param message whether or not to print an error message
+ * @return true if the types match
+ * @return false if the types do not match
+ */
+static bool type_check_single(Value* a, enum ValueType type, bool message) {
+  if (a->type == type)
+    return true;
+  if (message) {
+    parse_error("Type mismatch: received ");
+    value_print(a);
+    printf(" but expected ");
+    value_type_print(type);
+    printf("\n");
+  }
+  return false;
+}
+
+/**
  * @brief Parses a variable.
  */
 static Value variable() {
@@ -440,23 +487,15 @@ static Value term(Value* lhs) {
  * @brief Parses a logical expression (and and or).
  */
 static Value logical(Value* lhs) {
-  if (lhs->type != VAL_BOOL) {
-    parse_error("Expected boolean value but got ");
-    value_type_print(lhs->type);
-    printf("\n");
+  if (!type_check_single(lhs, VAL_BOOL, true))
     return value_new_null();
-  }
   enum TokenType op = parser.previous.type;
   if (op == TOKEN_AND) {
     block_new_opcodes_3(parser.function->block, OP_CJUMPF, 0, 0);
     int start = parser.function->block->opcodes->size;
     Value rhs = expression(PREC_AND);
-    if (rhs.type != VAL_BOOL) {
-      parse_error("Expected boolean value but got ");
-      value_type_print(rhs.type);
-      printf("\n");
+    if (!type_check_single(&rhs, VAL_BOOL, true))
       return value_new_null();
-    }
     int end = parser.function->block->opcodes->size;
     uint16_t dist = end - start + 1;
     (*(uint8_t*)parser.function->block->opcodes->data[start - 2]) =
@@ -468,12 +507,8 @@ static Value logical(Value* lhs) {
     block_new_opcodes_3(parser.function->block, OP_CJUMPT, 0, 0);
     int start = parser.function->block->opcodes->size;
     Value rhs = expression(PREC_OR);
-    if (rhs.type != VAL_BOOL) {
-      parse_error("Expected boolean value but got ");
-      value_type_print(rhs.type);
-      printf("\n");
+    if (!type_check_single(&rhs, VAL_BOOL, true))
       return value_new_null();
-    }
     int end = parser.function->block->opcodes->size;
     uint16_t dist = end - start + 1;
     (*(uint8_t*)parser.function->block->opcodes->data[start - 2]) =
@@ -555,7 +590,7 @@ static Value assignment() {
 
 static Value call(Value* lhs) {
   PFunction* func = TO_FUNCTION(*lhs);
-  if (lhs->type != VAL_OBJ || lhs->data.reference->type != P_OBJ_FUNCTION) {
+  if (!IS_TYPE(*lhs, P_OBJ_FUNCTION)) {
     parse_error("Expected function but got ");
     value_type_print(lhs->type);
     printf("\n");
@@ -567,14 +602,8 @@ static Value call(Value* lhs) {
       consume(TOKEN_COMMA);
     }
     Value arg = expression(PREC_ASSIGNMENT);
-    if (arg.type != func->parameters[argc].type) {
-      parse_error("Expected argument of type ");
-      value_type_print(func->parameters[argc++].type);
-      printf(" but got ");
-      value_type_print(arg.type);
-      printf("\n");
+    if (!type_check_single(&arg, func->parameters[argc].type, true))
       return value_new_null();
-    }
     argc++;
   }
   if (argc != func->arity) {
@@ -589,10 +618,6 @@ static Value call(Value* lhs) {
   }
   consume(TOKEN_RPAREN);
   block_new_opcodes(parser.function->block, OP_CALL, argc);
-
-  for (size_t i = 0; i < func->arity + 1; i++) {
-    block_new_opcode(parser.function->block, OP_POP);
-  }
 
   return func->returnType;
 }
@@ -652,12 +677,8 @@ static Value expression(enum Precedence prec) {
 static void statement_if() {
   consume(TOKEN_LPAREN);
   Value condition = expression(PREC_ASSIGNMENT);
-  if (condition.type != VAL_BOOL) {
-    parse_error("Expected value type VAL_BOOL but got ");
-    value_type_print(condition.type);
-    printf("\n");
+  if (!type_check_single(&condition, VAL_BOOL, true))
     return;
-  }
   consume(TOKEN_RPAREN);
 
   block_new_opcodes_3(parser.function->block, OP_CJUMPF, 0xFF, 0xFF);
@@ -690,6 +711,68 @@ static void statement_if() {
 }
 
 /**
+ * @brief Parses a function.
+ */
+static void statement_function(Value returnType) {
+  const char* name = parser.previous.start;
+  size_t length = parser.previous.length;
+
+  consume(TOKEN_LPAREN);
+
+  PString* fname = p_object_string_new_n(name, length);
+  Value fnameVal = value_new_object((PObject*)fname);
+  PFunction* function = p_object_function_new(fname, returnType);
+
+  parser.scope++;
+  while (!match(TOKEN_RPAREN)) {
+    if (match(TOKEN_I32) || match(TOKEN_BOOL) || match(TOKEN_STR)) {
+      ValueType type = value_type_from_token_type(parser.previous.type);
+      consume(TOKEN_IDENTIFIER);
+      const char* name = parser.previous.start;
+      size_t length = parser.previous.length;
+      PString* pname = p_object_string_new_n(name, length);
+      Value pval = value_new_object((PObject*)pname);
+      function->parameters[function->arity++] = (Value){.type = type};
+      new_local(&parser.previous, &function->parameters[function->arity - 1]);
+    } else {
+      parse_error("Expected parameter type but got '");
+      token_type_print(parser.previous.type);
+      printf("'\n");
+    }
+    if (!check(TOKEN_RPAREN))
+      consume(TOKEN_COMMA);
+  }
+  parser.scope--;
+
+  Value fval = value_new_object((PObject*)function);
+  // TODO: need support for local functions
+  if (!parser.scope) {
+    // global function
+    if (!hash_table_set(&parser.globals, fname->value, &fval))
+      parse_error("Global function '%s' already defined\n", fname->value);
+  } else {
+    parse_error("Local functions not yet supported\n");
+  }
+
+  parse_function(function);
+
+  if (!type_check(&function->returnType, &returnType, false)) {
+    parse_error("Function '%s' return type does not match declaration\n",
+                fname->value);
+  }
+
+  uint8_t index = block_new_constant(parser.function->block, &fnameVal);
+
+  block_new_opcodes(parser.function->block, OP_CONSTANT, index);
+  block_new_opcode(parser.function->block, OP_GLOBAL_DEFINE);
+
+  block_new_opcodes(parser.function->block, OP_CONSTANT,
+                    block_new_constant(parser.function->block, &fval));
+  block_new_opcodes(parser.function->block, OP_CONSTANT, index);
+  block_new_opcode(parser.function->block, OP_GLOBAL_SET);
+}
+
+/**
  * @brief Implementation of a local declaration.
  *
  * @param type
@@ -704,12 +787,7 @@ static void statement_declaration_local(enum ValueType type) {
     token_print_lexeme(&name);
     printf("' already declared.\n");
   }
-  if (val.type != type) {
-    parse_error("Expected value type ");
-    value_type_print(val.type);
-    printf(" but got ");
-    value_type_print(type);
-    printf("\n");
+  if (!type_check_single(&val, type, true)) {
     return;
   }
 
@@ -733,12 +811,7 @@ static void statement_declaration_global(enum ValueType type) {
 
   Value val = expression(PREC_ASSIGNMENT);
 
-  if (val.type != type) {
-    parse_error("Expected value type ");
-    value_type_print(val.type);
-    printf(" but got ");
-    value_type_print(type);
-    printf("\n");
+  if (!type_check_single(&val, type, true)) {
     return;
   }
 
@@ -756,6 +829,14 @@ static void statement_declaration() {
 
   consume(TOKEN_IDENTIFIER);
 
+  if (check(TOKEN_LPAREN)) {
+    if (type == VAL_OBJ)
+      statement_function((Value){.type = type, .data.reference = &(PObject){.type = P_OBJ_STRING}});
+    else
+      statement_function((Value){.type = type});
+    return;
+  }
+
   if (parser.scope)
     statement_declaration_local(type);
   else
@@ -769,12 +850,8 @@ static void statement_while() {
   consume(TOKEN_LPAREN);
   int start = parser.function->block->opcodes->size;
   Value condition = expression(PREC_ASSIGNMENT);
-  if (condition.type != VAL_BOOL) {
-    parse_error("Expected value type VAL_BOOL but got ");
-    value_type_print(condition.type);
-    printf("\n");
+  if (type_check_single(&condition, VAL_BOOL, true))
     return;
-  }
   consume(TOKEN_RPAREN);
   // check the conditional, if it's false, jump to after the loop
   block_new_opcodes_3(parser.function->block, OP_CJUMPF, 0xFF, 0xFF);
@@ -910,70 +987,6 @@ static void block() {
 }
 
 /**
- * @brief Parses a function.
- */
-static void statement_function() {
-  ValueType returnType = value_type_from_token_type(parser.previous.type);
-  consume(TOKEN_IDENTIFIER);
-  const char* name = parser.previous.start;
-  size_t length = parser.previous.length;
-
-  consume(TOKEN_LPAREN);
-
-  PString* fname = p_object_string_new_n(name, length);
-  Value fnameVal = value_new_object((PObject*)fname);
-  PFunction* function = p_object_function_new(fname, value_new_null());
-
-  parser.scope++;
-  while (!match(TOKEN_RPAREN)) {
-    if (match(TOKEN_I32) || match(TOKEN_BOOL) || match(TOKEN_STR)) {
-      ValueType type = value_type_from_token_type(parser.previous.type);
-      consume(TOKEN_IDENTIFIER);
-      const char* name = parser.previous.start;
-      size_t length = parser.previous.length;
-      PString* pname = p_object_string_new_n(name, length);
-      Value pval = value_new_object((PObject*)pname);
-      function->parameters[function->arity++] = (Value){.type = type};
-      new_local(&parser.previous, &function->parameters[function->arity - 1]);
-    } else {
-      parse_error("Expected parameter type but got '");
-      token_type_print(parser.previous.type);
-      printf("'\n");
-    }
-    if (!check(TOKEN_RPAREN))
-      consume(TOKEN_COMMA);
-  }
-  parser.scope--;
-
-  Value fval = value_new_object((PObject*)function);
-  // TODO: need support for local functions
-  if (!parser.scope) {
-    // global function
-    if (!hash_table_set(&parser.globals, fname->value, &fval))
-      parse_error("Global function '%s' already defined\n", fname->value);
-  } else {
-    parse_error("Local functions not yet supported\n");
-  }
-
-  parse_function(function);
-
-  if (function->returnType.type != returnType) {
-    parse_error("Function '%s' return type does not match declaration\n",
-                fname->value);
-  }
-
-  uint8_t index = block_new_constant(parser.function->block, &fnameVal);
-
-  block_new_opcodes(parser.function->block, OP_CONSTANT, index);
-  block_new_opcode(parser.function->block, OP_GLOBAL_DEFINE);
-
-  block_new_opcodes(parser.function->block, OP_CONSTANT,
-                    block_new_constant(parser.function->block, &fval));
-  block_new_opcodes(parser.function->block, OP_CONSTANT, index);
-  block_new_opcode(parser.function->block, OP_GLOBAL_SET);
-}
-
-/**
  * @brief Parses a statement.
  */
 void statement() {
@@ -982,22 +995,22 @@ void statement() {
     block_new_opcode(parser.function->block, OP_PRINT);
   } else if (match(TOKEN_IF)) {
     statement_if();
-  } else if (match(TOKEN_I32) || match(TOKEN_BOOL) || match(TOKEN_STR)) {
+  } else if (match(TOKEN_I32) || match(TOKEN_BOOL) || match(TOKEN_STR) ||
+             match(TOKEN_VOID)) {
     statement_declaration();
   } else if (match(TOKEN_WHILE)) {
     statement_while();
-  } else if (match(TOKEN_VOID)) {
-    statement_function();
   } else if (match(TOKEN_FOR)) {
     statement_for();
+  } else if (match(TOKEN_RETURN)) {
+    Value res = expression(PREC_ASSIGNMENT);
+    if (!type_check(&res, &parser.function->returnType, true))
+      return;
+    block_new_opcode(parser.function->block, OP_RETURN);
   } else if (match(TOKEN_EXIT)) {
     Value res = expression(PREC_ASSIGNMENT);
-    if (res.type != VAL_INTEGER_32) {
-      parse_error("Expected value type VAL_INTEGER_32 but got ");
-      value_type_print(res.type);
-      printf("\n");
+    if (!type_check_single(&res, VAL_INTEGER_32, true))
       return;
-    }
     block_new_opcode(parser.function->block, OP_EXIT);
   } else if (match(TOKEN_LBRACE)) {
     block();

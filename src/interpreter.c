@@ -124,7 +124,7 @@ InterpretResult interpret(PFunction* function) {
         uint8_t arg_count =
             *(uint8_t*)frame->function->block->opcodes->data[frame->ip + 1];
         Value fun = peek_stack(arg_count);
-        if (fun.type != VAL_OBJ || fun.data.reference->type != P_OBJ_FUNCTION) {
+        if (!IS_TYPE(fun, P_OBJ_FUNCTION)) {
           printf("Cannot call non-function");
           exit(1);
         }
@@ -145,8 +145,10 @@ InterpretResult interpret(PFunction* function) {
         if (interpreter.fp <= 0) {
           return INTERPRET_OK;
         }
+        for (size_t i = 0; i < frame->slotCount + 1; i++) {
+          pop_stack();
+        }
         frame = &interpreter.frames[interpreter.fp - 1];
-        frame->slots = &interpreter.stack[interpreter.sp];
         push_stack(res);
         break;
       }
@@ -181,7 +183,6 @@ InterpretResult interpret(PFunction* function) {
         Value v2 = pop_stack();
         Value v1 = pop_stack();
         push_stack(value_new_int_32(v1.data.integer_32 * v2.data.integer_32));
-        push_stack(v1);
         frame->ip++;
         break;
       }
