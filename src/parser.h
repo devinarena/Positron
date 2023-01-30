@@ -31,13 +31,13 @@ typedef enum Precedence {
   PREC_PRIMARY
 } Precedence;
 
+typedef Value (*ParseFn)(bool can_assign);
+
 typedef struct ParseRule {
-    Value (*prefix)(bool can_assign);
-    Value (*infix)(bool can_assign);
+    ParseFn prefix;
+    ParseFn suffix;
     Precedence precedence;
 } ParseRule;
-
-typedef Value (*ParseFn)(bool can_assign);
 
 typedef struct Local {
   Token name;

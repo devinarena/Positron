@@ -252,7 +252,6 @@ static bool type_check_single(Value* a, enum ValueType type, bool message) {
   return false;
 }
 
-
 /**
  * @brief Parses a variable.
  */
@@ -303,7 +302,9 @@ static Value variable() {
  * @brief Parses a literal.
  */
 static Value literal() {
-  if (match(TOKEN_LITERAL_INTEGER)) {
+  enum TokenType type = parser.previous.type;
+
+  if (type == TOKEN_LITERAL_INTEGER) {
     char buffer[200];
     strncpy(buffer, parser.previous.start, parser.previous.length);
     buffer[parser.previous.length] = '\0';
@@ -311,33 +312,33 @@ static Value literal() {
     uint8_t index = block_new_constant(parser.function->block, &val);
     block_new_opcodes(parser.function->block, OP_CONSTANT, index);
     return val;
-  } else if (match(TOKEN_LITERAL_STRING)) {
+  } else if (type == TOKEN_LITERAL_STRING) {
     Value val = value_new_object((PObject*)p_object_string_new_n(
         parser.previous.start, parser.previous.length));
     uint8_t index = block_new_constant(parser.function->block, &val);
     block_new_opcodes(parser.function->block, OP_CONSTANT, index);
     return val;
-  } else if (match(TOKEN_NULL)) {
+  } else if (type == TOKEN_NULL) {
     Value val = value_new_null();
     uint8_t index = block_new_constant(parser.function->block, &val);
     block_new_opcodes(parser.function->block, OP_CONSTANT, index);
     return val;
-  } else if (match(TOKEN_TRUE)) {
+  } else if (type == TOKEN_TRUE) {
     Value val = value_new_boolean(true);
     uint8_t index = block_new_constant(parser.function->block, &val);
     block_new_opcodes(parser.function->block, OP_CONSTANT, index);
     return val;
-  } else if (match(TOKEN_FALSE)) {
+  } else if (type == TOKEN_FALSE) {
     Value val = value_new_boolean(false);
     uint8_t index = block_new_constant(parser.function->block, &val);
     block_new_opcodes(parser.function->block, OP_CONSTANT, index);
     return val;
-  } else if (match(TOKEN_IDENTIFIER)) {
+  } else if (type == TOKEN_IDENTIFIER) {
     return variable();
   } else {
     // TODO: create a better error message
     parse_error("Expected literal but got token of type ");
-    token_type_print(parser.current.type);
+    token_type_print(parser.previous.type);
     printf("\n");
   }
   return value_new_null();
@@ -346,36 +347,25 @@ static Value literal() {
 static Value expression(Precedence prec);
 
 /**
- * @brief Handles primary level parsing, including parenthesized expressions and
- * literals.
- *
- * @return Value* The value of the parsed expression.
- */
-static Value primary() {
-  if (match(TOKEN_LPAREN)) {
-    Value val = expression(PREC_ASSIGNMENT);
-    consume(TOKEN_RPAREN);
-    return val;
-  } else {
-    return literal();
-  }
-}
-
-/**
  * @brief Handles conditional parsing, e.g. ==, !=
  *
  * @return Value the result of the condition
  */
 static Value condition(Value* lhs) {
-  if (!match(TOKEN_EQUAL_EQUAL) && !match(TOKEN_NOT_EQUAL) &&
-      !match(TOKEN_GREATER) && !match(TOKEN_GREATER_EQUAL) &&
-      !match(TOKEN_LESS) && !match(TOKEN_LESS_EQUAL)) {
+  enum TokenType type = parser.previous.type;
+  ParseRule* rule = get_rule(type);
+  
+  if (type != TOKEN_EQUAL_EQUAL && type != TOKEN_NOT_EQUAL &&
+      type != TOKEN_GREATER && type != TOKEN_GREATER_EQUAL &&
+      type != TOKEN_LESS && type != TOKEN_LESS_EQUAL) {
     parse_error("Expected condition operator but got token of type ");
     token_type_print(parser.current.type);
     return value_new_null();
   }
+  
   enum TokenType op = parser.previous.type;
-  Value rhs = expression(PREC_COMPARISON);
+  Value rhs = expression((Precedence)(rule->precedence + 1));
+  
   if (lhs->type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
     if (op == TOKEN_EQUAL_EQUAL)
       block_new_opcode(parser.function->block, OP_COMPARE_INTEGER_32);
@@ -402,92 +392,13 @@ static Value condition(Value* lhs) {
     printf("\n");
     return value_new_null();
   }
-  if (op == TOKEN_NOT_EQUAL) {
-    block_new_opcode(parser.function->block, OP_NOT);
-  }
   return value_new_boolean(true);
-}
-
-/**
- * @brief Handles factor level parsing, including multiplication and division.
- *
- * @return Value The value of the parsed expression.
- */
-static Value factor() {
-  Value val = primary();
-
-  while (match(TOKEN_STAR) || match(TOKEN_SLASH)) {
-    enum TokenType op = parser.previous.type;
-    Value rhs = primary();
-    if (op == TOKEN_STAR) {
-      if (val.type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
-        block_new_opcode(parser.function->block, OP_MULTIPLY_INTEGER_32);
-      } else {
-        // TODO: create a better error message
-        parse_error("Cannot multiply values of type ");
-        value_type_print(val.type);
-        printf(" and ");
-        value_type_print(rhs.type);
-        printf("\n");
-      }
-    } else if (op == TOKEN_SLASH) {
-      if (val.type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
-        block_new_opcode(parser.function->block, OP_DIVIDE_INTEGER_32);
-      } else {
-        // TODO: create a better error message
-        parse_error("Cannot divide values of type ");
-        value_type_print(val.type);
-        printf(" and ");
-        value_type_print(rhs.type);
-        printf("\n");
-      }
-    }
-    val = rhs;
-  }
-
-  return val;
-}
-
-/**
- * @brief Handles term-level parsing (addition and subtraction)
- */
-static Value term(Value* lhs) {
-  enum TokenType op = parser.previous.type;
-
-  Value rhs = factor();
-  if (lhs->type == VAL_NULL)
-    return rhs;
-
-  if (op == TOKEN_PLUS) {
-    if (lhs->type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
-      block_new_opcode(parser.function->block, OP_ADD_INTEGER_32);
-    } else {
-      // TODO: create a better error message
-      parse_error("Cannot add values of type ");
-      value_type_print(lhs->type);
-      printf(" and ");
-      value_type_print(rhs.type);
-      printf("\n");
-    }
-  } else if (op == TOKEN_MINUS) {
-    if (lhs->type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
-      block_new_opcode(parser.function->block, OP_SUBTRACT_INTEGER_32);
-    } else {
-      // TODO: create a better error message
-      parse_error("Cannot subtract values of type ");
-      value_type_print(lhs->type);
-      printf(" and ");
-      value_type_print(rhs.type);
-      printf("\n");
-    }
-  }
-  return rhs;
 }
 
 /**
  * @brief Parses a logical expression (and and or).
  */
-static Value logical(Value* lhs) {
+static Value and(Value* lhs) {
   if (!type_check_single(lhs, VAL_BOOL, true))
     return value_new_null();
   enum TokenType op = parser.previous.type;
@@ -518,6 +429,10 @@ static Value logical(Value* lhs) {
     return rhs;
   }
   return value_new_null();
+}
+
+static Value or() {
+
 }
 
 /**
@@ -1091,9 +1006,9 @@ ParseRule rules[] = {
     [TOKEN_NONE] = {NULL, NULL, PREC_NONE},
     [TOKEN_ERROR] = {NULL, NULL, PREC_NONE},
 
-    [TOKEN_LITERAL_INTEGER] = {NULL, NULL, PREC_NONE},
-    [TOKEN_LITERAL_FLOATING] = {NULL, NULL, PREC_NONE},
-    [TOKEN_LITERAL_STRING] = {NULL, NULL, PREC_NONE},
+    [TOKEN_LITERAL_INTEGER] = {literal, NULL, PREC_NONE},
+    [TOKEN_LITERAL_FLOATING] = {literal, NULL, PREC_NONE},
+    [TOKEN_LITERAL_STRING] = {literal, NULL, PREC_NONE},
 
     [TOKEN_BOOL] = {NULL, NULL, PREC_NONE},
     [TOKEN_ELSE] = {NULL, NULL, PREC_NONE},
@@ -1110,7 +1025,7 @@ ParseRule rules[] = {
     [TOKEN_STR] = {NULL, NULL, PREC_NONE},
     [TOKEN_VOID] = {NULL, NULL, PREC_NONE},
     [TOKEN_WHILE] = {NULL, NULL, PREC_NONE},
-    
+
     [TOKEN_IDENTIFIER] = {variable, NULL, PREC_NONE},
 
     [TOKEN_EXCLAMATION] = {NULL, NULL, PREC_NONE},
@@ -1123,16 +1038,16 @@ ParseRule rules[] = {
     [TOKEN_RPAREN] = {NULL, NULL, PREC_NONE},
     [TOKEN_LBRACE] = {NULL, NULL, PREC_NONE},
     [TOKEN_RBRACE] = {NULL, NULL, PREC_NONE},
-    [TOKEN_GREATER] = {NULL, NULL, PREC_NONE},
-    [TOKEN_LESS] = {NULL, NULL, PREC_NONE},
+    [TOKEN_GREATER] = {NULL, comparison, PREC_NONE},
+    [TOKEN_LESS] = {NULL, comparison, PREC_NONE},
     [TOKEN_COMMA] = {NULL, NULL, PREC_NONE},
 
-    [TOKEN_EQUAL_EQUAL] = {NULL, NULL, PREC_COMPARISON},
-    [TOKEN_NOT_EQUAL] = {NULL, NULL, PREC_COMPARISON},
-    [TOKEN_GREATER_EQUAL] = {NULL, NULL, PREC_COMPARISON},
-    [TOKEN_LESS_EQUAL] = {NULL, NULL, PREC_COMPARISON},
-    [TOKEN_AND] = {NULL, NULL, PREC_AND},
-    [TOKEN_OR] = {NULL, NULL, PREC_OR},
+    [TOKEN_EQUAL_EQUAL] = {NULL, comparison, PREC_COMPARISON},
+    [TOKEN_NOT_EQUAL] = {NULL, comparison, PREC_COMPARISON},
+    [TOKEN_GREATER_EQUAL] = {NULL, comparison, PREC_COMPARISON},
+    [TOKEN_LESS_EQUAL] = {NULL, comparison, PREC_COMPARISON},
+    [TOKEN_AND] = {NULL, and, PREC_AND},
+    [TOKEN_OR] = {NULL, or, PREC_OR},
 
     [TOKEN_SEMICOLON] = {NULL, NULL, PREC_NONE},
     [TOKEN_EOF] = {NULL, NULL, PREC_NONE},
