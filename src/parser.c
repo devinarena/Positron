@@ -252,6 +252,7 @@ static bool type_check_single(Value* a, enum ValueType type, bool message) {
   return false;
 }
 
+
 /**
  * @brief Parses a variable.
  */
@@ -342,7 +343,7 @@ static Value literal() {
   return value_new_null();
 }
 
-static Value expression(enum Precedence prec);
+static Value expression(Precedence prec);
 
 /**
  * @brief Handles primary level parsing, including parenthesized expressions and
@@ -453,7 +454,7 @@ static Value factor() {
 static Value term(Value* lhs) {
   enum TokenType op = parser.previous.type;
 
-  Value rhs = expression(PREC_TERM);
+  Value rhs = factor();
   if (lhs->type == VAL_NULL)
     return rhs;
 
@@ -633,46 +634,30 @@ static Value call(Value* lhs) {
  * @param prec the precedence to handle
  * @return Value the result of the expression
  */
-static Value expression(enum Precedence prec) {
-  Value val = value_new_null();
-  // TODO: clean this up
-  // prefix operators
-  if (match(TOKEN_MINUS) || match(TOKEN_EXCLAMATION)) {
-    val = unary();
-  } else {
-    val = term(&val);
+static Value expression(Precedence prec) {
+  advance();
+  ParseFn prefix = getRule(parser.previous.type)->prefix;
+
+  // the first rule we hit will always be a prefix rule.
+  if (prefix == NULL) {
+    parseError("Expected expression.");
+    return;
   }
 
-  // infix operators (by precedence)
-  if (prec <= PREC_CALL) {
-    while (match(TOKEN_LPAREN)) {
-      val = call(&val);
-    }
-  }
-  if (prec <= PREC_TERM) {
-    while (match(TOKEN_PLUS) || match(TOKEN_MINUS)) {
-      val = term(&val);
-    }
-  }
-  if (prec <= PREC_COMPARISON) {
-    while (check(TOKEN_EQUAL_EQUAL) || check(TOKEN_NOT_EQUAL) ||
-           check(TOKEN_GREATER) || check(TOKEN_GREATER_EQUAL) ||
-           check(TOKEN_LESS) || check(TOKEN_LESS_EQUAL)) {
-      val = condition(&val);
-    }
-  }
-  if (prec <= PREC_AND) {
-    while (match(TOKEN_AND) || match(TOKEN_OR)) {
-      val = logical(&val);
-    }
-  }
-  if (prec <= PREC_ASSIGNMENT) {
-    while (check(TOKEN_EQUAL)) {
-      val = assignment();
-    }
+  bool canAssign = prec <= PREC_ASSIGNMENT;
+
+  prefix(canAssign);
+
+  // handle infix rules
+  while (prec <= getRule(parser.current.type)->precedence) {
+    advance();
+    ParseFn infix = getRule(parser.previous.type)->infix;
+    infix(canAssign);
   }
 
-  return val;
+  if (!canAssign && match(TOKEN_EQUAL)) {
+    parseError("Invalid assignment target.");
+  }
 }
 
 /**
@@ -835,7 +820,8 @@ static void statement_declaration() {
 
   if (check(TOKEN_LPAREN)) {
     if (type == VAL_OBJ)
-      statement_function((Value){.type = type, .data.reference = &(PObject){.type = P_OBJ_STRING}});
+      statement_function((Value){
+          .type = type, .data.reference = &(PObject){.type = P_OBJ_STRING}});
     else
       statement_function((Value){.type = type});
     return;
@@ -1100,4 +1086,61 @@ PFunction* parse_function(PFunction* target) {
 
   parser.scope--;
   return target;
+}
+ParseRule rules[] = {
+    [TOKEN_NONE] = {NULL, NULL, PREC_NONE},
+    [TOKEN_ERROR] = {NULL, NULL, PREC_NONE},
+
+    [TOKEN_LITERAL_INTEGER] = {NULL, NULL, PREC_NONE},
+    [TOKEN_LITERAL_FLOATING] = {NULL, NULL, PREC_NONE},
+    [TOKEN_LITERAL_STRING] = {NULL, NULL, PREC_NONE},
+
+    [TOKEN_BOOL] = {NULL, NULL, PREC_NONE},
+    [TOKEN_ELSE] = {NULL, NULL, PREC_NONE},
+    [TOKEN_EXIT] = {NULL, NULL, PREC_NONE},
+    [TOKEN_FALSE] = {NULL, NULL, PREC_NONE},
+    [TOKEN_FOR] = {NULL, NULL, PREC_NONE},
+    [TOKEN_I32] = {NULL, NULL, PREC_NONE},
+    [TOKEN_IF] = {NULL, NULL, PREC_NONE},
+    [TOKEN_NULL] = {NULL, NULL, PREC_NONE},
+    [TOKEN_PRINT] = {NULL, NULL, PREC_NONE},
+    [TOKEN_RETURN] = {NULL, NULL, PREC_NONE},
+    [TOKEN_STR] = {NULL, NULL, PREC_NONE},
+    [TOKEN_TRUE] = {NULL, NULL, PREC_NONE},
+    [TOKEN_STR] = {NULL, NULL, PREC_NONE},
+    [TOKEN_VOID] = {NULL, NULL, PREC_NONE},
+    [TOKEN_WHILE] = {NULL, NULL, PREC_NONE},
+    
+    [TOKEN_IDENTIFIER] = {variable, NULL, PREC_NONE},
+
+    [TOKEN_EXCLAMATION] = {NULL, NULL, PREC_NONE},
+    [TOKEN_PLUS] = {NULL, binary, PREC_TERM},
+    [TOKEN_MINUS] = {NULL, binary, PREC_TERM},
+    [TOKEN_STAR] = {NULL, binary, PREC_FACTOR},
+    [TOKEN_SLASH] = {NULL, binary, PREC_FACTOR},
+    [TOKEN_EQUAL] = {NULL, assignment, PREC_ASSIGNMENT},
+    [TOKEN_LPAREN] = {call, NULL, PREC_CALL},
+    [TOKEN_RPAREN] = {NULL, NULL, PREC_NONE},
+    [TOKEN_LBRACE] = {NULL, NULL, PREC_NONE},
+    [TOKEN_RBRACE] = {NULL, NULL, PREC_NONE},
+    [TOKEN_GREATER] = {NULL, NULL, PREC_NONE},
+    [TOKEN_LESS] = {NULL, NULL, PREC_NONE},
+    [TOKEN_COMMA] = {NULL, NULL, PREC_NONE},
+
+    [TOKEN_EQUAL_EQUAL] = {NULL, NULL, PREC_COMPARISON},
+    [TOKEN_NOT_EQUAL] = {NULL, NULL, PREC_COMPARISON},
+    [TOKEN_GREATER_EQUAL] = {NULL, NULL, PREC_COMPARISON},
+    [TOKEN_LESS_EQUAL] = {NULL, NULL, PREC_COMPARISON},
+    [TOKEN_AND] = {NULL, NULL, PREC_AND},
+    [TOKEN_OR] = {NULL, NULL, PREC_OR},
+
+    [TOKEN_SEMICOLON] = {NULL, NULL, PREC_NONE},
+    [TOKEN_EOF] = {NULL, NULL, PREC_NONE},
+};
+
+/**
+ * @brief Looks up the rule for a token from the parser's grammar.
+ */
+static ParseRule* get_rule(enum TokenType type) {
+  return &rules[type];
 }
