@@ -515,40 +515,41 @@ static Value binary(Value* lhs, bool canAssign) {
 
 /**
  * @brief Parses an assignment expression.
+ * TODO: Deprecated? Probably wont use this now
  *
  */
-static Value assignment(Value* lhs, bool canAssign) {
-  Token* name = &parser.previous;
-  int index = get_local(name);
+// static Value assignment(Value* lhs, bool canAssign) {
+//   Token* name = &parser.previous;
+//   int index = get_local(name);
 
-  const char* name_start = name->start;
-  const int name_length = name->length;
-  Value v_var_name = value_new_object(
-      (PObject*)p_object_string_new_n(name_start, name_length));
+//   const char* name_start = name->start;
+//   const int name_length = name->length;
+//   Value v_var_name = value_new_object(
+//       (PObject*)p_object_string_new_n(name_start, name_length));
 
-  match(TOKEN_EQUAL);
-  block_new_opcode(parser.function->block, OP_POP);
-  Value rhs = expression(PREC_ASSIGNMENT);
+//   match(TOKEN_EQUAL);
+//   block_new_opcode(parser.function->block, OP_POP);
+//   Value rhs = expression(PREC_ASSIGNMENT);
 
-  if (parser.scope) {
-    if (index != -1) {
-      block_new_opcodes(parser.function->block, OP_LOCAL_SET, index);
-      return rhs;
-    }
-  }
+//   if (parser.scope) {
+//     if (index != -1) {
+//       block_new_opcodes(parser.function->block, OP_LOCAL_SET, index);
+//       return rhs;
+//     }
+//   }
 
-  Value* val = hash_table_get(&parser.globals, TO_STRING(v_var_name)->value);
-  if (!val) {
-    parse_error("Undefined variable '%s'\n", TO_STRING(v_var_name)->value);
-    return value_new_null();
-  }
+//   Value* val = hash_table_get(&parser.globals, TO_STRING(v_var_name)->value);
+//   if (!val) {
+//     parse_error("Undefined variable '%s'\n", TO_STRING(v_var_name)->value);
+//     return value_new_null();
+//   }
 
-  block_new_opcodes(parser.function->block, OP_CONSTANT,
-                    block_new_constant(parser.function->block, &v_var_name));
-  block_new_opcode(parser.function->block, OP_GLOBAL_SET);
+//   block_new_opcodes(parser.function->block, OP_CONSTANT,
+//                     block_new_constant(parser.function->block, &v_var_name));
+//   block_new_opcode(parser.function->block, OP_GLOBAL_SET);
 
-  return rhs;
-}
+//   return rhs;
+// }
 
 /**
  * @brief Descent case for function calls. Handled as an infix operator.
@@ -1084,13 +1085,13 @@ ParseRule rules[] = {
     [TOKEN_MINUS] = {unary, binary, PREC_TERM},
     [TOKEN_STAR] = {NULL, binary, PREC_FACTOR},
     [TOKEN_SLASH] = {NULL, binary, PREC_FACTOR},
-    [TOKEN_EQUAL] = {NULL, assignment, PREC_ASSIGNMENT},
+    [TOKEN_EQUAL] = {NULL, NULL, PREC_ASSIGNMENT},
     [TOKEN_LPAREN] = {grouping, call, PREC_CALL},
     [TOKEN_RPAREN] = {NULL, NULL, PREC_NONE},
     [TOKEN_LBRACE] = {NULL, NULL, PREC_NONE},
     [TOKEN_RBRACE] = {NULL, NULL, PREC_NONE},
-    [TOKEN_GREATER] = {NULL, comparison, PREC_NONE},
-    [TOKEN_LESS] = {NULL, comparison, PREC_NONE},
+    [TOKEN_GREATER] = {NULL, comparison, PREC_COMPARISON},
+    [TOKEN_LESS] = {NULL, comparison, PREC_COMPARISON},
     [TOKEN_COMMA] = {NULL, NULL, PREC_NONE},
 
     [TOKEN_EQUAL_EQUAL] = {NULL, comparison, PREC_COMPARISON},
