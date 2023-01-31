@@ -22,6 +22,7 @@ enum TokenType {
   TOKEN_BOOL,
   TOKEN_ELSE,
   TOKEN_EXIT,
+  TOKEN_F64,
   TOKEN_FALSE,
   TOKEN_FOR,
   TOKEN_I32,

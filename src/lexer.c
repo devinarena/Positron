@@ -114,6 +114,8 @@ static Token identifier() {
     return make_token(TOKEN_EXIT, schar, length);
   } else if (length == 4 && strncmp(schar, "else", length) == 0) {
     return make_token(TOKEN_ELSE, schar, length);
+  } else if (length == 3 && strncmp(schar, "f64", length) == 0) {
+    return make_token(TOKEN_F64, schar, length);
   } else if (length == 5 && strncmp(schar, "false", length) == 0) {
     return make_token(TOKEN_FALSE, schar, length);
   } else if (length == 3 && strncmp(schar, "for", length) == 0) {

@@ -82,6 +82,9 @@ void token_type_print(enum TokenType type) {
     case TOKEN_EXIT:
       printf("TOKEN_EXIT");
       break;
+    case TOKEN_F64:
+      printf("TOKEN_F64");
+      break;
     case TOKEN_FALSE:
       printf("TOKEN_FALSE");
       break;

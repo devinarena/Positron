@@ -1,10 +1,4 @@
 
-i32 factorial(i32 n) {
-    if (n == 0) {
-        ret 1
-    } else {
-        ret n * factorial(n - 1)
-    }
-}
+f64 b = 3.0
 
-print factorial(5)
+print b

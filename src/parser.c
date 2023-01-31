@@ -133,6 +133,7 @@ static void synchronize() {
     switch (parser.current.type) {
       case TOKEN_PRINT:
       case TOKEN_I32:
+      case TOKEN_F64:
       case TOKEN_STR:
       case TOKEN_BOOL:
       case TOKEN_IF:
@@ -291,16 +292,16 @@ static Value variable(bool canAssign) {
     Value value = expression(PREC_ASSIGNMENT);
     if (!type_check(&value, val, true))
       return value_new_null();
-    block_new_opcodes_3(
-        parser.function->block, OP_CONSTANT,
-        block_new_constant(parser.function->block, &value_new_object((PObject*)name)),
-        OP_GLOBAL_SET);
+    block_new_opcodes_3(parser.function->block, OP_CONSTANT,
+                        block_new_constant(parser.function->block,
+                                           &value_new_object((PObject*)name)),
+                        OP_GLOBAL_SET);
     return value;
   } else {
-    block_new_opcodes_3(
-        parser.function->block, OP_CONSTANT,
-        block_new_constant(parser.function->block, &value_new_object((PObject*)name)),
-        OP_GLOBAL_GET);
+    block_new_opcodes_3(parser.function->block, OP_CONSTANT,
+                        block_new_constant(parser.function->block,
+                                           &value_new_object((PObject*)name)),
+                        OP_GLOBAL_GET);
   }
 
   return *val;
@@ -317,6 +318,14 @@ static Value literal(bool canAssign) {
     strncpy(buffer, parser.previous.start, parser.previous.length);
     buffer[parser.previous.length] = '\0';
     Value val = value_new_int_32(atoi(buffer));
+    uint8_t index = block_new_constant(parser.function->block, &val);
+    block_new_opcodes(parser.function->block, OP_CONSTANT, index);
+    return val;
+  } else if (type == TOKEN_LITERAL_FLOATING) {
+    char buffer[200];
+    strncpy(buffer, parser.previous.start, parser.previous.length);
+    buffer[parser.previous.length] = '\0';
+    Value val = value_new_float(atof(buffer));
     uint8_t index = block_new_constant(parser.function->block, &val);
     block_new_opcodes(parser.function->block, OP_CONSTANT, index);
     return val;
@@ -424,7 +433,9 @@ static Value comparison(Value* lhs, bool canAssign) {
   } else if (lhs->type == VAL_BOOL && rhs.type == VAL_BOOL) {
     if (op == TOKEN_EQUAL_EQUAL)
       block_new_opcode(parser.function->block, OP_COMPARE_BOOLEAN);
-    else {
+    else if (op == TOKEN_NOT_EQUAL) {
+      block_new_opcodes(parser.function->block, OP_COMPARE_BOOLEAN, OP_NOT);
+    } else {
       parse_error("Invalid operator for boolean comparison");
       return value_new_null();
     }
@@ -585,10 +596,6 @@ static Value call(Value* lhs, bool canAssign) {
   consume(TOKEN_RPAREN);
   block_new_opcodes(parser.function->block, OP_CALL, argc);
 
-  printf("return type: ");
-  value_type_print(func->returnType.type);
-  printf("\n");
-
   return func->returnType;
 }
 
@@ -682,7 +689,8 @@ static void statement_function(Value returnType) {
 
   parser.scope++;
   while (!match(TOKEN_RPAREN)) {
-    if (match(TOKEN_I32) || match(TOKEN_BOOL) || match(TOKEN_STR)) {
+    if (match(TOKEN_I32) || match(TOKEN_F64) || match(TOKEN_BOOL) ||
+        match(TOKEN_STR)) {
       ValueType type = value_type_from_token_type(parser.previous.type);
       consume(TOKEN_IDENTIFIER);
       const char* name = parser.previous.start;
@@ -845,7 +853,8 @@ static void statement_for() {
   // initializer
   if (match(TOKEN_SEMICOLON)) {
     // no initializer
-  } else if (match(TOKEN_I32) || match(TOKEN_BOOL) || match(TOKEN_STR)) {
+  } else if (match(TOKEN_I32) || match(TOKEN_F64) || match(TOKEN_BOOL) ||
+             match(TOKEN_STR)) {
     statement_declaration();
     if (parser.previous.type != TOKEN_SEMICOLON)
       consume(TOKEN_SEMICOLON);
@@ -953,8 +962,8 @@ void statement() {
     block_new_opcode(parser.function->block, OP_PRINT);
   } else if (match(TOKEN_IF)) {
     statement_if();
-  } else if (match(TOKEN_I32) || match(TOKEN_BOOL) || match(TOKEN_STR) ||
-             match(TOKEN_VOID)) {
+  } else if (match(TOKEN_I32) || match(TOKEN_F64) || match(TOKEN_BOOL) ||
+             match(TOKEN_STR) || match(TOKEN_VOID)) {
     statement_declaration();
   } else if (match(TOKEN_WHILE)) {
     statement_while();
@@ -1066,6 +1075,7 @@ ParseRule rules[] = {
     [TOKEN_BOOL] = {NULL, NULL, PREC_NONE},
     [TOKEN_ELSE] = {NULL, NULL, PREC_NONE},
     [TOKEN_EXIT] = {NULL, NULL, PREC_NONE},
+    [TOKEN_F64] = {NULL, NULL, PREC_NONE},
     [TOKEN_FALSE] = {literal, NULL, PREC_NONE},
     [TOKEN_FOR] = {NULL, NULL, PREC_NONE},
     [TOKEN_I32] = {NULL, NULL, PREC_NONE},

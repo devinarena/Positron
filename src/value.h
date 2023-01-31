@@ -19,6 +19,7 @@ typedef enum ValueType {
   VAL_NULL,
   VAL_BOOL,
   VAL_INTEGER_32,
+  VAL_FLOATING_64,
   VAL_OBJ
 } ValueType;
 
@@ -26,6 +27,7 @@ typedef struct {
   enum ValueType type;
   union data {
     int integer_32;
+    double floating_64;
     bool boolean;
     PObject* reference;
   } data;
