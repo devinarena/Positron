@@ -31,11 +31,12 @@ typedef enum Precedence {
   PREC_PRIMARY
 } Precedence;
 
-typedef Value (*ParseFn)(bool can_assign);
+typedef Value (*PrefixFn)(bool can_assign);
+typedef Value (*InfixFn)(Value* lhs, bool can_assign);
 
 typedef struct ParseRule {
-    ParseFn prefix;
-    ParseFn suffix;
+    PrefixFn prefix;
+    InfixFn infix;
     Precedence precedence;
 } ParseRule;
 
@@ -66,7 +67,7 @@ PFunction* parse_script(char* name);
 PFunction* parse_function(PFunction* function);
 // frees the parser's memory
 void parser_free();
-ParseRule get_rule(TokenType type);
+ParseRule* get_rule(enum TokenType type);
 
 void statement();
 
