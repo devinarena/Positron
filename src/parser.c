@@ -252,49 +252,57 @@ static bool type_check_single(Value* a, enum ValueType type, bool message) {
   return false;
 }
 
+static Value expression(Precedence prec);
+
 /**
  * @brief Parses a variable.
  */
 static Value variable(bool canAssign) {
   Token token = parser.previous;
-  Value* val;
-  if (!parser.scope) {
-    val = hash_table_get_n(&parser.globals, token.start, token.length);
-    if (val == NULL) {
-      parse_error("Undefined variable '");
-      token_print_lexeme(&token);
-      printf("'\n");
-      return value_new_null();
-    }
+  if (parser.scope) {
+    int index = get_local(&token);
 
-    uint8_t index =
-        block_new_constant(parser.function->block,
-                           &value_new_object((PObject*)p_object_string_new_n(
-                               token.start, token.length)));
-
-    block_new_opcodes(parser.function->block, OP_CONSTANT, index);
-    block_new_opcode(parser.function->block, OP_GLOBAL_GET);
-  } else {
-    int local = get_local(&token);
-    if (local != -1) {
-      block_new_opcodes(parser.function->block, OP_LOCAL_GET, local);
-      return parser.locals[local].value;
+    if (index != -1) {
+      if (canAssign && match(TOKEN_EQUAL)) {
+        Value value = expression(PREC_ASSIGNMENT);
+        if (!type_check(&value, &parser.locals[index].value, true))
+          return value_new_null();
+        parser.locals[index].value = value;
+        block_new_opcodes(parser.function->block, OP_LOCAL_SET, index);
+        return value;
+      } else {
+        block_new_opcodes(parser.function->block, OP_LOCAL_GET, index);
+        return parser.locals[index].value;
+      }
     }
-
-    // if we haven't found a local, check the globals
-    val = hash_table_get_n(&parser.globals, token.start, token.length);
-    if (val == NULL) {
-      parse_error("Undefined variable '");
-      token_print_lexeme(&token);
-      printf("'\n");
-      return value_new_null();
-    }
-    Value varName = value_new_object(
-        (PObject*)p_object_string_new_n(token.start, token.length));
-    block_new_opcodes_3(parser.function->block, OP_CONSTANT,
-                        block_new_constant(parser.function->block, &varName),
-                        OP_GLOBAL_GET);
   }
+
+  PString* name = p_object_string_new_n(token.start, token.length);
+
+  Value* val = hash_table_get(&parser.globals, name->value);
+  if (val == NULL) {
+    parse_error("Undefined variable '");
+    token_print_lexeme(&token);
+    printf("'\n");
+    return value_new_null();
+  }
+
+  if (canAssign && match(TOKEN_EQUAL)) {
+    Value value = expression(PREC_ASSIGNMENT);
+    if (!type_check(&value, val, true))
+      return value_new_null();
+    block_new_opcodes_3(
+        parser.function->block, OP_CONSTANT,
+        block_new_constant(parser.function->block, &value_new_object((PObject*)name)),
+        OP_GLOBAL_SET);
+    return value;
+  } else {
+    block_new_opcodes_3(
+        parser.function->block, OP_CONSTANT,
+        block_new_constant(parser.function->block, &value_new_object((PObject*)name)),
+        OP_GLOBAL_GET);
+  }
+
   return *val;
 }
 
@@ -344,12 +352,10 @@ static Value literal(bool canAssign) {
   return value_new_null();
 }
 
-static Value expression(Precedence prec);
-
-
 static Value grouping(bool canAssign) {
   Value val = expression(PREC_ASSIGNMENT);
   consume(TOKEN_RPAREN);
+  return val;
 }
 
 /**
@@ -377,13 +383,12 @@ static Value unary(bool canAssign) {
       return val;
     }
     default: {
-      parse_error("Invalid unary operator");
+      parse_error("Invalid unary operator\n");
       break;
     }
   }
   return val;
 }
-
 
 /**
  * @brief Handles conditional parsing, e.g. ==, !=
@@ -534,7 +539,7 @@ static Value assignment(Value* lhs, bool canAssign) {
 
   Value* val = hash_table_get(&parser.globals, TO_STRING(v_var_name)->value);
   if (!val) {
-    parse_error("Undefined variable '%s'", TO_STRING(v_var_name)->value);
+    parse_error("Undefined variable '%s'\n", TO_STRING(v_var_name)->value);
     return value_new_null();
   }
 
@@ -545,6 +550,9 @@ static Value assignment(Value* lhs, bool canAssign) {
   return rhs;
 }
 
+/**
+ * @brief Descent case for function calls. Handled as an infix operator.
+ */
 static Value call(Value* lhs, bool canAssign) {
   PFunction* func = TO_FUNCTION(*lhs);
   if (!IS_TYPE(*lhs, P_OBJ_FUNCTION)) {
@@ -596,7 +604,7 @@ static Value expression(Precedence prec) {
 
   // the first rule we hit will always be a prefix rule.
   if (prefix == NULL) {
-    parse_error("Expected expression.");
+    parse_error("Expected expression.\n");
     return value_new_null();
   }
 
@@ -799,7 +807,7 @@ static void statement_while() {
   consume(TOKEN_LPAREN);
   int start = parser.function->block->opcodes->size;
   Value condition = expression(PREC_ASSIGNMENT);
-  if (type_check_single(&condition, VAL_BOOL, true))
+  if (!type_check_single(&condition, VAL_BOOL, true))
     return;
   consume(TOKEN_RPAREN);
   // check the conditional, if it's false, jump to after the loop
@@ -1057,7 +1065,7 @@ ParseRule rules[] = {
     [TOKEN_BOOL] = {NULL, NULL, PREC_NONE},
     [TOKEN_ELSE] = {NULL, NULL, PREC_NONE},
     [TOKEN_EXIT] = {NULL, NULL, PREC_NONE},
-    [TOKEN_FALSE] = {NULL, NULL, PREC_NONE},
+    [TOKEN_FALSE] = {literal, NULL, PREC_NONE},
     [TOKEN_FOR] = {NULL, NULL, PREC_NONE},
     [TOKEN_I32] = {NULL, NULL, PREC_NONE},
     [TOKEN_IF] = {NULL, NULL, PREC_NONE},
@@ -1065,7 +1073,7 @@ ParseRule rules[] = {
     [TOKEN_PRINT] = {NULL, NULL, PREC_NONE},
     [TOKEN_RETURN] = {NULL, NULL, PREC_NONE},
     [TOKEN_STR] = {NULL, NULL, PREC_NONE},
-    [TOKEN_TRUE] = {NULL, NULL, PREC_NONE},
+    [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
     [TOKEN_VOID] = {NULL, NULL, PREC_NONE},
     [TOKEN_WHILE] = {NULL, NULL, PREC_NONE},
 
