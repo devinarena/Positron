@@ -133,7 +133,7 @@ static void synchronize() {
     switch (parser.current.type) {
       case TOKEN_PRINT:
       case TOKEN_I32:
-      case TOKEN_F64:
+      case TOKEN_F32:
       case TOKEN_STR:
       case TOKEN_BOOL:
       case TOKEN_IF:
@@ -325,7 +325,7 @@ static Value literal(bool canAssign) {
     char buffer[200];
     strncpy(buffer, parser.previous.start, parser.previous.length);
     buffer[parser.previous.length] = '\0';
-    Value val = value_new_float(atof(buffer));
+    Value val = value_new_float_32(atof(buffer));
     uint8_t index = block_new_constant(parser.function->block, &val);
     block_new_opcodes(parser.function->block, OP_CONSTANT, index);
     return val;
@@ -491,36 +491,81 @@ static Value or (Value * lhs, bool canAssign) {
   return rhs;
 }
 
+#define BINARY_OP_A(op, type)                                       \
+  switch ((op)) {                                                   \
+    case TOKEN_PLUS: {                                              \
+      block_new_opcode(parser.function->block, OP_ADD_##type);      \
+      break;                                                        \
+    }                                                               \
+    case TOKEN_MINUS: {                                             \
+      block_new_opcode(parser.function->block, OP_SUBTRACT_##type); \
+      break;                                                        \
+    }                                                               \
+    case TOKEN_STAR: {                                              \
+      block_new_opcode(parser.function->block, OP_MULTIPLY_##type);    \
+      break;                                                        \
+    }                                                               \
+    case TOKEN_SLASH: {                                             \
+      block_new_opcode(parser.function->block, OP_DIVIDE_##type);   \
+      break;                                                        \
+    }                                                               \
+    default:                                                        \
+      parse_error("Invalid binary operator provided\n");             \
+      return value_new_null();                                      \
+  }                                                                 \
+
 /**
  * @brief Parse rule for binary expressions.
  */
 static Value binary(Value* lhs, bool canAssign) {
   enum TokenType prev = parser.previous.type;
   Value rhs = expression((Precedence)(get_rule(prev)->precedence + 1));
-  if (lhs->type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
-    if (prev == TOKEN_PLUS)
-      block_new_opcode(parser.function->block, OP_ADD_INTEGER_32);
-    else if (prev == TOKEN_MINUS)
-      block_new_opcode(parser.function->block, OP_SUBTRACT_INTEGER_32);
-    else if (prev == TOKEN_STAR)
-      block_new_opcode(parser.function->block, OP_MULTIPLY_INTEGER_32);
-    else if (prev == TOKEN_SLASH)
-      block_new_opcode(parser.function->block, OP_DIVIDE_INTEGER_32);
-  } else if (lhs->type == VAL_BOOL && rhs.type == VAL_BOOL) {
-    if (prev == TOKEN_EQUAL_EQUAL)
-      block_new_opcode(parser.function->block, OP_COMPARE_BOOLEAN);
-    else {
-      parse_error("Invalid operator for boolean comparison");
+
+  switch (lhs->type) {
+    case VAL_INTEGER_32: {
+      switch(rhs.type) {
+        case VAL_INTEGER_32: {
+          BINARY_OP_A(prev, INTEGER_32);
+          break;
+        }
+        default: {
+          parse_error("Cannot perform binary operation on type ");
+          value_type_print(lhs->type);
+          printf(" and ");
+          value_type_print(rhs.type);
+          printf("\n");
+          return value_new_null();
+        }
+      }
+      break;
+    }
+    case VAL_FLOATING_32: {
+      switch(rhs.type) {
+        case VAL_FLOATING_32: {
+          BINARY_OP_A(prev, FLOATING_32);
+          break;
+        }
+        default: {
+          parse_error("Cannot perform binary operation on type ");
+          value_type_print(lhs->type);
+          printf(" and ");
+          value_type_print(rhs.type);
+          printf("\n");
+          return value_new_null();
+        }
+      }
+      break;
+    }
+    default: {
+      parse_error("Cannot perform binary operation on type ");
+      value_type_print(lhs->type);
+      printf(" and ");
+      value_type_print(rhs.type);
+      printf("\n");
       return value_new_null();
     }
-  } else {
-    parse_error("Cannot compare values of type ");
-    value_type_print(lhs->type);
-    printf(" and ");
-    value_type_print(rhs.type);
-    printf("\n");
-    return value_new_null();
   }
+
   return rhs;
 }
 
@@ -689,7 +734,7 @@ static void statement_function(Value returnType) {
 
   parser.scope++;
   while (!match(TOKEN_RPAREN)) {
-    if (match(TOKEN_I32) || match(TOKEN_F64) || match(TOKEN_BOOL) ||
+    if (match(TOKEN_I32) || match(TOKEN_F32) || match(TOKEN_BOOL) ||
         match(TOKEN_STR)) {
       ValueType type = value_type_from_token_type(parser.previous.type);
       consume(TOKEN_IDENTIFIER);
@@ -853,7 +898,7 @@ static void statement_for() {
   // initializer
   if (match(TOKEN_SEMICOLON)) {
     // no initializer
-  } else if (match(TOKEN_I32) || match(TOKEN_F64) || match(TOKEN_BOOL) ||
+  } else if (match(TOKEN_I32) || match(TOKEN_F32) || match(TOKEN_BOOL) ||
              match(TOKEN_STR)) {
     statement_declaration();
     if (parser.previous.type != TOKEN_SEMICOLON)
@@ -962,7 +1007,7 @@ void statement() {
     block_new_opcode(parser.function->block, OP_PRINT);
   } else if (match(TOKEN_IF)) {
     statement_if();
-  } else if (match(TOKEN_I32) || match(TOKEN_F64) || match(TOKEN_BOOL) ||
+  } else if (match(TOKEN_I32) || match(TOKEN_F32) || match(TOKEN_BOOL) ||
              match(TOKEN_STR) || match(TOKEN_VOID)) {
     statement_declaration();
   } else if (match(TOKEN_WHILE)) {
@@ -1075,7 +1120,7 @@ ParseRule rules[] = {
     [TOKEN_BOOL] = {NULL, NULL, PREC_NONE},
     [TOKEN_ELSE] = {NULL, NULL, PREC_NONE},
     [TOKEN_EXIT] = {NULL, NULL, PREC_NONE},
-    [TOKEN_F64] = {NULL, NULL, PREC_NONE},
+    [TOKEN_F32] = {NULL, NULL, PREC_NONE},
     [TOKEN_FALSE] = {literal, NULL, PREC_NONE},
     [TOKEN_FOR] = {NULL, NULL, PREC_NONE},
     [TOKEN_I32] = {NULL, NULL, PREC_NONE},

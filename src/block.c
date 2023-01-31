@@ -190,6 +190,18 @@ size_t block_print_opcode(Block* block, size_t index) {
       printf("OP_LESS_EQUAL_INTEGER_32");
       return 1;
     }
+    case OP_ADD_FLOATING_32:
+      printf("OP_ADD_FLOATING_32");
+      return 1;
+    case OP_SUBTRACT_FLOATING_32:
+      printf("OP_SUBTRACT_FLOATING_32");
+      return 1;
+    case OP_MULTIPLY_FLOATING_32:
+      printf("OP_MULTIPLY_FLOATING_32");
+      return 1;
+    case OP_DIVIDE_FLOATING_32: 
+      printf("OP_DIVIDE_FLOATING_32");
+      return 1;
     case OP_COMPARE_BOOLEAN: {
       printf("OP_COMPARE_BOOLEAN");
       return 1;

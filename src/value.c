@@ -76,9 +76,9 @@ enum ValueType value_type_from_token_type(enum TokenType type) {
     case TOKEN_I32:
     case TOKEN_LITERAL_INTEGER:
       return VAL_INTEGER_32;
-    case TOKEN_F64:
+    case TOKEN_F32:
     case TOKEN_LITERAL_FLOATING:
-      return VAL_FLOATING_64;
+      return VAL_FLOATING_32;
     case TOKEN_STR:
     case TOKEN_LITERAL_STRING:
       return VAL_OBJ;
@@ -103,8 +103,8 @@ void value_print(Value* value) {
     case VAL_INTEGER_32:
       printf("%d", value->data.integer_32);
       break;
-    case VAL_FLOATING_64:
-      printf("%f", value->data.floating_64);
+    case VAL_FLOATING_32:
+      printf("%f", value->data.floating_32);
       break;
     case VAL_OBJ:
       p_object_print(value->data.reference);
@@ -131,8 +131,8 @@ void value_type_print(enum ValueType type) {
     case VAL_INTEGER_32:
       printf("i32");
       break;
-    case VAL_FLOATING_64:
-      printf("f64");
+    case VAL_FLOATING_32:
+      printf("f32");
       break;
     case VAL_OBJ:
       printf("obj");

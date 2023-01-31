@@ -19,7 +19,7 @@ typedef enum ValueType {
   VAL_NULL,
   VAL_BOOL,
   VAL_INTEGER_32,
-  VAL_FLOATING_64,
+  VAL_FLOATING_32,
   VAL_OBJ
 } ValueType;
 
@@ -27,7 +27,7 @@ typedef struct {
   enum ValueType type;
   union data {
     int integer_32;
-    double floating_64;
+    float floating_32;
     bool boolean;
     PObject* reference;
   } data;
@@ -61,6 +61,12 @@ void value_free(Value* value);
   ((Value){.type = VAL_INTEGER_32, .data.integer_32 = (val)})
 
 /**
+ * @brief Returns a new 32-bit floating point value.
+ */
+#define value_new_float_32(val) \
+  ((Value){.type = VAL_FLOATING_32, .data.floating_32 = (val)})
+
+/**
  * @brief Returns a new null value.
  */
 #define value_new_null() ((Value){.type = VAL_NULL, .data.integer_32 = 0})
@@ -70,7 +76,8 @@ void value_free(Value* value);
  *
  * @param val a pointer to the object
  */
-#define value_new_object(val) ((Value){.type = VAL_OBJ, .data.reference = (val)})
+#define value_new_object(val) \
+  ((Value){.type = VAL_OBJ, .data.reference = (val)})
 
 /**
  * @brief Returns a new boolean value.

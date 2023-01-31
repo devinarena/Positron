@@ -229,6 +229,34 @@ InterpretResult interpret(PFunction* function) {
         frame->ip++;
         break;
       }
+      case OP_ADD_FLOATING_32: {
+        Value v2 = pop_stack();
+        Value v1 = pop_stack();
+        push_stack(value_new_float_32(v1.data.floating_32 + v2.data.floating_32));
+        frame->ip++;
+        break;
+      }
+      case OP_SUBTRACT_FLOATING_32: {
+        Value v2 = pop_stack();
+        Value v1 = pop_stack();
+        push_stack(value_new_float_32(v1.data.floating_32 - v2.data.floating_32));
+        frame->ip++;
+        break;
+      }
+      case OP_MULTIPLY_FLOATING_32: {
+        Value v2 = pop_stack();
+        Value v1 = pop_stack();
+        push_stack(value_new_float_32(v1.data.floating_32 * v2.data.floating_32));
+        frame->ip++;
+        break;
+      }
+      case OP_DIVIDE_FLOATING_32: {
+        Value v2 = pop_stack();
+        Value v1 = pop_stack();
+        push_stack(value_new_float_32(v1.data.floating_32 / v2.data.floating_32));
+        frame->ip++;
+        break;
+      }
       case OP_COMPARE_BOOLEAN: {
         Value v2 = pop_stack();
         Value v1 = pop_stack();

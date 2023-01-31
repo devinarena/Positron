@@ -1,4 +1,7 @@
 
-f64 b = 3.0
+f32 b = 3.0
 
-print b
+print b + 2.0
+print b - 2.0
+print b * 2.0
+print b / 2.0
