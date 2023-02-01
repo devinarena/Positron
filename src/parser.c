@@ -400,57 +400,6 @@ static Value unary(bool canAssign) {
 }
 
 /**
- * @brief Handles conditional parsing, e.g. ==, !=
- *
- * @return Value the result of the condition
- */
-static Value comparison(Value* lhs, bool canAssign) {
-  enum TokenType type = parser.previous.type;
-  ParseRule* rule = get_rule(type);
-
-  if (type != TOKEN_EQUAL_EQUAL && type != TOKEN_NOT_EQUAL &&
-      type != TOKEN_GREATER && type != TOKEN_GREATER_EQUAL &&
-      type != TOKEN_LESS && type != TOKEN_LESS_EQUAL) {
-    parse_error("Expected condition operator but got token of type ");
-    token_type_print(parser.current.type);
-    return value_new_null();
-  }
-
-  enum TokenType op = parser.previous.type;
-  Value rhs = expression((Precedence)(rule->precedence + 1));
-
-  if (lhs->type == VAL_INTEGER_32 && rhs.type == VAL_INTEGER_32) {
-    if (op == TOKEN_EQUAL_EQUAL)
-      block_new_opcode(parser.function->block, OP_COMPARE_INTEGER_32);
-    else if (op == TOKEN_GREATER)
-      block_new_opcode(parser.function->block, OP_GREATER_INTEGER_32);
-    else if (op == TOKEN_LESS)
-      block_new_opcode(parser.function->block, OP_LESS_INTEGER_32);
-    else if (op == TOKEN_GREATER_EQUAL)
-      block_new_opcode(parser.function->block, OP_GREATER_EQUAL_INTEGER_32);
-    else if (op == TOKEN_LESS_EQUAL)
-      block_new_opcode(parser.function->block, OP_LESS_EQUAL_INTEGER_32);
-  } else if (lhs->type == VAL_BOOL && rhs.type == VAL_BOOL) {
-    if (op == TOKEN_EQUAL_EQUAL)
-      block_new_opcode(parser.function->block, OP_COMPARE_BOOLEAN);
-    else if (op == TOKEN_NOT_EQUAL) {
-      block_new_opcodes(parser.function->block, OP_COMPARE_BOOLEAN, OP_NOT);
-    } else {
-      parse_error("Invalid operator for boolean comparison");
-      return value_new_null();
-    }
-  } else {
-    parse_error("Cannot compare values of type ");
-    value_type_print(lhs->type);
-    printf(" and ");
-    value_type_print(rhs.type);
-    printf("\n");
-    return value_new_null();
-  }
-  return value_new_boolean(true);
-}
-
-/**
  * @brief Parses a logical expression for and.
  */
 static Value and (Value * lhs, bool canAssign) {
@@ -491,28 +440,53 @@ static Value or (Value * lhs, bool canAssign) {
   return rhs;
 }
 
-#define BINARY_OP_A(op, type)                                       \
-  switch ((op)) {                                                   \
-    case TOKEN_PLUS: {                                              \
-      block_new_opcode(parser.function->block, OP_ADD_##type);      \
-      break;                                                        \
-    }                                                               \
-    case TOKEN_MINUS: {                                             \
-      block_new_opcode(parser.function->block, OP_SUBTRACT_##type); \
-      break;                                                        \
-    }                                                               \
-    case TOKEN_STAR: {                                              \
-      block_new_opcode(parser.function->block, OP_MULTIPLY_##type);    \
-      break;                                                        \
-    }                                                               \
-    case TOKEN_SLASH: {                                             \
-      block_new_opcode(parser.function->block, OP_DIVIDE_##type);   \
-      break;                                                        \
-    }                                                               \
-    default:                                                        \
-      parse_error("Invalid binary operator provided\n");             \
-      return value_new_null();                                      \
-  }                                                                 \
+#define BINARY_OP_A(op, type)                                            \
+  switch ((op)) {                                                        \
+    case TOKEN_PLUS: {                                                   \
+      block_new_opcode(parser.function->block, OP_ADD_##type);           \
+      break;                                                             \
+    }                                                                    \
+    case TOKEN_MINUS: {                                                  \
+      block_new_opcode(parser.function->block, OP_SUBTRACT_##type);      \
+      break;                                                             \
+    }                                                                    \
+    case TOKEN_STAR: {                                                   \
+      block_new_opcode(parser.function->block, OP_MULTIPLY_##type);      \
+      break;                                                             \
+    }                                                                    \
+    case TOKEN_SLASH: {                                                  \
+      block_new_opcode(parser.function->block, OP_DIVIDE_##type);        \
+      break;                                                             \
+    }                                                                    \
+    case TOKEN_GREATER: {                                                \
+      block_new_opcode(parser.function->block, OP_GREATER_##type);       \
+      break;                                                             \
+    }                                                                    \
+    case TOKEN_LESS: {                                                   \
+      block_new_opcode(parser.function->block, OP_LESS_##type);          \
+      break;                                                             \
+    }                                                                    \
+    case TOKEN_GREATER_EQUAL: {                                          \
+      block_new_opcode(parser.function->block, OP_GREATER_EQUAL_##type); \
+      break;                                                             \
+    }                                                                    \
+    case TOKEN_LESS_EQUAL: {                                             \
+      block_new_opcode(parser.function->block, OP_LESS_EQUAL_##type);    \
+      break;                                                             \
+    }                                                                    \
+    case TOKEN_EQUAL_EQUAL: {                                            \
+      block_new_opcode(parser.function->block, OP_COMPARE_##type);       \
+      break;                                                             \
+    }                                                                    \
+    case TOKEN_NOT_EQUAL: {                                              \
+      block_new_opcode(parser.function->block, OP_COMPARE_##type);       \
+      block_new_opcode(parser.function->block, OP_NOT);                  \
+      break;                                                             \
+    }                                                                    \
+    default:                                                             \
+      parse_error("Invalid binary operator provided\n");                 \
+      return value_new_null();                                           \
+  }
 
 /**
  * @brief Parse rule for binary expressions.
@@ -523,9 +497,14 @@ static Value binary(Value* lhs, bool canAssign) {
 
   switch (lhs->type) {
     case VAL_INTEGER_32: {
-      switch(rhs.type) {
+      switch (rhs.type) {
         case VAL_INTEGER_32: {
           BINARY_OP_A(prev, INTEGER_32);
+          break;
+        }
+        case VAL_FLOATING_32: {
+          block_new_opcodes_3(parser.function->block, OP_SWAP, OP_I32_TO_F32, OP_SWAP);
+          BINARY_OP_A(prev, FLOATING_32);
           break;
         }
         default: {
@@ -540,8 +519,13 @@ static Value binary(Value* lhs, bool canAssign) {
       break;
     }
     case VAL_FLOATING_32: {
-      switch(rhs.type) {
+      switch (rhs.type) {
         case VAL_FLOATING_32: {
+          BINARY_OP_A(prev, FLOATING_32);
+          break;
+        }
+        case VAL_INTEGER_32: {
+          block_new_opcode(parser.function->block, OP_I32_TO_F32);
           BINARY_OP_A(prev, FLOATING_32);
           break;
         }
@@ -1145,14 +1129,14 @@ ParseRule rules[] = {
     [TOKEN_RPAREN] = {NULL, NULL, PREC_NONE},
     [TOKEN_LBRACE] = {NULL, NULL, PREC_NONE},
     [TOKEN_RBRACE] = {NULL, NULL, PREC_NONE},
-    [TOKEN_GREATER] = {NULL, comparison, PREC_COMPARISON},
-    [TOKEN_LESS] = {NULL, comparison, PREC_COMPARISON},
+    [TOKEN_GREATER] = {NULL, binary, PREC_COMPARISON},
+    [TOKEN_LESS] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_COMMA] = {NULL, NULL, PREC_NONE},
 
-    [TOKEN_EQUAL_EQUAL] = {NULL, comparison, PREC_COMPARISON},
-    [TOKEN_NOT_EQUAL] = {NULL, comparison, PREC_COMPARISON},
-    [TOKEN_GREATER_EQUAL] = {NULL, comparison, PREC_COMPARISON},
-    [TOKEN_LESS_EQUAL] = {NULL, comparison, PREC_COMPARISON},
+    [TOKEN_EQUAL_EQUAL] = {NULL, binary, PREC_COMPARISON},
+    [TOKEN_NOT_EQUAL] = {NULL, binary, PREC_COMPARISON},
+    [TOKEN_GREATER_EQUAL] = {NULL, binary, PREC_COMPARISON},
+    [TOKEN_LESS_EQUAL] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_AND] = {NULL, and, PREC_AND},
     [TOKEN_OR] = {NULL, or, PREC_OR},
 

@@ -116,6 +116,14 @@ InterpretResult interpret(PFunction* function) {
         frame->ip++;
         break;
       }
+      case OP_SWAP: {
+        Value a = pop_stack();
+        Value b = pop_stack();
+        push_stack(a);
+        push_stack(b);
+        frame->ip++;
+        break;
+      }
       case OP_EXIT: {
         Value res = pop_stack();
         return (InterpretResult)res.data.integer_32;
@@ -229,6 +237,18 @@ InterpretResult interpret(PFunction* function) {
         frame->ip++;
         break;
       }
+      case OP_I32_TO_F32: {
+        Value v = pop_stack();
+        push_stack(value_new_float_32((float)v.data.integer_32));
+        frame->ip++;
+        break;
+      }
+      case OP_NEGATE_FLOATING_32: {
+        Value v = pop_stack();
+        push_stack(value_new_float_32(-v.data.floating_32));
+        frame->ip++;
+        break;
+      }
       case OP_ADD_FLOATING_32: {
         Value v2 = pop_stack();
         Value v1 = pop_stack();
@@ -254,6 +274,41 @@ InterpretResult interpret(PFunction* function) {
         Value v2 = pop_stack();
         Value v1 = pop_stack();
         push_stack(value_new_float_32(v1.data.floating_32 / v2.data.floating_32));
+        frame->ip++;
+        break;
+      }
+      case OP_COMPARE_FLOATING_32: {
+        Value v2 = pop_stack();
+        Value v1 = pop_stack();
+        push_stack(value_new_boolean(v1.data.floating_32 == v2.data.floating_32));
+        frame->ip++;
+        break;
+      }
+      case OP_GREATER_FLOATING_32: {
+        Value v2 = pop_stack();
+        Value v1 = pop_stack();
+        push_stack(value_new_boolean(v1.data.floating_32 > v2.data.floating_32));
+        frame->ip++;
+        break;
+      }
+      case OP_LESS_FLOATING_32: {
+        Value v2 = pop_stack();
+        Value v1 = pop_stack();
+        push_stack(value_new_boolean(v1.data.floating_32 < v2.data.floating_32));
+        frame->ip++;
+        break;
+      }
+      case OP_GREATER_EQUAL_FLOATING_32: {
+        Value v2 = pop_stack();
+        Value v1 = pop_stack();
+        push_stack(value_new_boolean(v1.data.floating_32 >= v2.data.floating_32));
+        frame->ip++;
+        break;
+      }
+      case OP_LESS_EQUAL_FLOATING_32: {
+        Value v2 = pop_stack();
+        Value v1 = pop_stack();
+        push_stack(value_new_boolean(v1.data.floating_32 <= v2.data.floating_32));
         frame->ip++;
         break;
       }
