@@ -66,6 +66,18 @@ PFunction* p_object_function_new(PString* name, Value returnType) {
 }
 
 /**
+ * @brief Allocates and returns a new struct object.
+ */
+PStruct* p_object_struct_new(PString* name) {
+  PStruct* struct_ = malloc(sizeof(PStruct));
+  struct_->base = *p_object_new(P_OBJ_STRUCT);
+  struct_->name = name;
+  struct_->fields = malloc(sizeof(HashTable));
+  hash_table_init(struct_->fields);
+  return struct_;
+}
+
+/**
  * @brief Outputs the objects type to stdout.
  * 
  * @param type the type of the object
@@ -77,6 +89,9 @@ void p_object_type_print(PObjectType type) {
       break;
     case P_OBJ_FUNCTION:
       printf("object");
+      break;
+    case P_OBJ_STRUCT:
+      printf("struct");
       break;
     default:
       printf("object");
@@ -117,6 +132,13 @@ void p_object_free(PObject* object) {
       PFunction* function = (PFunction*)object;
       p_object_free((PObject*)function->name);
       block_free(function->block);
+      break;
+    }
+    case P_OBJ_STRUCT: {
+      PStruct* struct_ = (PStruct*)object;
+      p_object_free((PObject*)struct_->name);
+      hash_table_free(struct_->fields);
+      free(struct_->fields);
       break;
     }
     default:

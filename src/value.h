@@ -77,7 +77,7 @@ void value_free(Value* value);
  * @param val a pointer to the object
  */
 #define value_new_object(val) \
-  ((Value){.type = VAL_OBJ, .data.reference = (val)})
+  ((Value){.type = VAL_OBJ, .data.reference = ((PObject*)val)})
 
 /**
  * @brief Returns a new boolean value.

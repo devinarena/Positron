@@ -109,6 +109,9 @@ void token_type_print(enum TokenType type) {
     case TOKEN_STR:
       printf("TOKEN_STR");
       break;
+    case TOKEN_STRUCT:
+      printf("TOKEN_STRUCT");
+      break;
     case TOKEN_TRUE:
       printf("TOKEN_TRUE");
       break;

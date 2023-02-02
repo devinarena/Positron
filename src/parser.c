@@ -140,6 +140,9 @@ static void synchronize() {
       case TOKEN_WHILE:
       case TOKEN_FOR:
       case TOKEN_VOID:
+      case TOKEN_RETURN:
+      case TOKEN_SEMICOLON:
+      case TOKEN_STRUCT:
         return;
       default:
         break;
@@ -253,6 +256,20 @@ static bool type_check_single(Value* a, enum ValueType type, bool message) {
   return false;
 }
 
+/**
+ * @brief Helper for checking the type of a proposed parameter.
+ *
+ * @return short the ValueType associated with the token type or -1 if the token
+ * type is not a valid parameter type.
+ */
+static short parameter_type() {
+  if (!(match(TOKEN_I32) || match(TOKEN_F32) || match(TOKEN_BOOL) ||
+        match(TOKEN_STR) || match(TOKEN_VOID))) {
+    return -1;
+  }
+  return value_type_from_token_type(parser.previous.type);
+}
+
 static Value expression(Precedence prec);
 
 /**
@@ -361,6 +378,9 @@ static Value literal(bool canAssign) {
   return value_new_null();
 }
 
+/**
+ * @brief Parses grouping expressions.
+ */
 static Value grouping(bool canAssign) {
   Value val = expression(PREC_ASSIGNMENT);
   consume(TOKEN_RPAREN);
@@ -503,7 +523,8 @@ static Value binary(Value* lhs, bool canAssign) {
           break;
         }
         case VAL_FLOATING_32: {
-          block_new_opcodes_3(parser.function->block, OP_SWAP, OP_I32_TO_F32, OP_SWAP);
+          block_new_opcodes_3(parser.function->block, OP_SWAP, OP_I32_TO_F32,
+                              OP_SWAP);
           BINARY_OP_A(prev, FLOATING_32);
           break;
         }
@@ -970,10 +991,61 @@ static void statement_for() {
 }
 
 /**
- * @brief Parses a block.
+ * @brief Recursive descent case for a struct declaration.
  *
  */
-static void block() {
+static void statement_struct() {
+  bool local = parser.scope > 0;
+
+  consume(TOKEN_IDENTIFIER);
+  Token identifier = parser.previous;
+  consume(TOKEN_LBRACE);
+  PString* name = p_object_string_new_n(identifier.start, identifier.length);
+  if (!local) {
+    block_new_opcodes(
+        parser.function->block, OP_CONSTANT,
+        block_new_constant(parser.function->block, &value_new_object(name)));
+    block_new_opcode(parser.function->block, OP_GLOBAL_DEFINE);
+  }
+  PStruct* pstruct = p_object_struct_new(name);
+  while (!match(TOKEN_RBRACE)) {
+    short type = parameter_type();
+    if (type == -1) {
+      parse_error("Expected type but got ");
+      token_type_print(parser.current.type);
+      printf("\n");
+      return;
+    }
+    consume(TOKEN_IDENTIFIER);
+    Token identifier = parser.previous;
+    consume(TOKEN_SEMICOLON);
+
+    PString* name = p_object_string_new_n(identifier.start, identifier.length);
+    Value typeVal = (Value){.type = type};
+    hash_table_set(pstruct->fields, name->value, &typeVal);
+  }
+
+  Value nameValue = value_new_object(name);
+  Value structValue = value_new_object(pstruct);
+
+  block_new_opcodes(parser.function->block, OP_CONSTANT,
+                    block_new_constant(parser.function->block, &structValue));
+
+  if (local) {
+    int index = new_local(&identifier, &structValue);
+    block_new_opcodes(parser.function->block, OP_LOCAL_SET, index);
+  } else {
+    block_new_opcodes(parser.function->block, OP_CONSTANT,
+                      block_new_constant(parser.function->block, &nameValue));
+    block_new_opcode(parser.function->block, OP_GLOBAL_SET);
+    hash_table_set(&parser.globals, name->value, &structValue);
+  }
+}
+
+/**
+ * @brief Parses a block.
+ */
+static void statement_block() {
   parser.scope++;
   while (!match(TOKEN_RBRACE)) {
     statement();
@@ -991,8 +1063,7 @@ void statement() {
     block_new_opcode(parser.function->block, OP_PRINT);
   } else if (match(TOKEN_IF)) {
     statement_if();
-  } else if (match(TOKEN_I32) || match(TOKEN_F32) || match(TOKEN_BOOL) ||
-             match(TOKEN_STR) || match(TOKEN_VOID)) {
+  } else if (parameter_type() > 0) {
     statement_declaration();
   } else if (match(TOKEN_WHILE)) {
     statement_while();
@@ -1008,8 +1079,10 @@ void statement() {
     if (!type_check_single(&res, VAL_INTEGER_32, true))
       return;
     block_new_opcode(parser.function->block, OP_EXIT);
+  } else if (match(TOKEN_STRUCT)) {
+    statement_struct();
   } else if (match(TOKEN_LBRACE)) {
-    block();
+    statement_block();
   } else {
     expression(PREC_ASSIGNMENT);
   }

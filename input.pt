@@ -1,5 +1,4 @@
 
-f32 b = 3.0
-
-print b + 2
-print 2 * b
+struct Test {
+    i32 a;
+}

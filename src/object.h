@@ -18,11 +18,13 @@
 
 #include "block.h"
 #include "value.h"
+#include "hash_table.h"
 
 typedef enum PObjectType {
   P_OBJ,
   P_OBJ_STRING,
   P_OBJ_FUNCTION,
+  P_OBJ_STRUCT,
 } PObjectType;
 
 typedef struct PObject {
@@ -45,6 +47,12 @@ typedef struct PFunction {
   Value parameters[255];
 } PFunction;
 
+typedef struct PStruct {
+  PObject base;
+  PString* name;
+  HashTable* fields;
+} PStruct;
+
 // allocates and returns a new PObject.
 PObject* p_object_new(PObjectType type);
 // allocates and returns a new PString.
@@ -52,6 +60,8 @@ PString* p_object_string_new_n(const char* data, size_t length);
 PString* p_object_string_new(const char* data);
 // allocates and returns a new PFunction.
 PFunction* p_object_function_new(PString* name, Value returnType);
+// allocates and returns a new PStruct.
+PStruct* p_object_struct_new(PString* name);
 // prints the type of the given PObject.
 void p_object_type_print(PObjectType type);
 // prints the given PObject.
