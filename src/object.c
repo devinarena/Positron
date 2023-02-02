@@ -112,6 +112,9 @@ void p_object_print(PObject* object) {
       value_type_print((((PFunction*)object)->returnType).type);
       printf(" %s>", ((PFunction*)object)->name->value);
       break;
+    case P_OBJ_STRUCT:
+      printf("<struct %p>", object);
+      break;
     default:
       printf("<object %p>", object);
       break;

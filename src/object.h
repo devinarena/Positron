@@ -25,6 +25,7 @@ typedef enum PObjectType {
   P_OBJ_STRING,
   P_OBJ_FUNCTION,
   P_OBJ_STRUCT,
+  P_OBJ_STRUCT_INSTANCE,
 } PObjectType;
 
 typedef struct PObject {
@@ -52,6 +53,12 @@ typedef struct PStruct {
   PString* name;
   HashTable* fields;
 } PStruct;
+
+typedef struct PStructInstance {
+  PObject base;
+  PStruct* template;
+  dyn_list* values;
+} PStructInstance;
 
 // allocates and returns a new PObject.
 PObject* p_object_new(PObjectType type);

@@ -1008,6 +1008,7 @@ static void statement_struct() {
     block_new_opcode(parser.function->block, OP_GLOBAL_DEFINE);
   }
   PStruct* pstruct = p_object_struct_new(name);
+  size_t index = 0;
   while (!match(TOKEN_RBRACE)) {
     short type = parameter_type();
     if (type == -1) {
@@ -1021,8 +1022,8 @@ static void statement_struct() {
     consume(TOKEN_SEMICOLON);
 
     PString* name = p_object_string_new_n(identifier.start, identifier.length);
-    Value typeVal = (Value){.type = type};
-    hash_table_set(pstruct->fields, name->value, &typeVal);
+    Value iValue = (Value){.type = type, .data.integer_32 = index++};
+    hash_table_set(pstruct->fields, name->value, &iValue);
   }
 
   Value nameValue = value_new_object(name);
@@ -1063,7 +1064,7 @@ void statement() {
     block_new_opcode(parser.function->block, OP_PRINT);
   } else if (match(TOKEN_IF)) {
     statement_if();
-  } else if (parameter_type() > 0) {
+  } else if (parameter_type() >= 0) {
     statement_declaration();
   } else if (match(TOKEN_WHILE)) {
     statement_while();
@@ -1182,7 +1183,7 @@ ParseRule rules[] = {
     [TOKEN_FOR] = {NULL, NULL, PREC_NONE},
     [TOKEN_I32] = {NULL, NULL, PREC_NONE},
     [TOKEN_IF] = {NULL, NULL, PREC_NONE},
-    [TOKEN_NULL] = {NULL, NULL, PREC_NONE},
+    [TOKEN_NULL] = {literal, NULL, PREC_NONE},
     [TOKEN_PRINT] = {NULL, NULL, PREC_NONE},
     [TOKEN_RETURN] = {NULL, NULL, PREC_NONE},
     [TOKEN_STR] = {NULL, NULL, PREC_NONE},
