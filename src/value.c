@@ -81,6 +81,7 @@ enum ValueType value_type_from_token_type(enum TokenType type) {
       return VAL_FLOATING_32;
     case TOKEN_STR:
     case TOKEN_LITERAL_STRING:
+    case TOKEN_IDENTIFIER:
       return VAL_OBJ;
     default:
       return VAL_NULL;

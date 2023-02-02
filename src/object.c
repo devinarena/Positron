@@ -13,6 +13,8 @@
 
 /**
  * @brief Allocates and returns a new object.
+ * 
+ * TODO: Figure out heap issue
  *
  * @param type the type of the object
  * @return Object* a pointer to the newly allocated object
@@ -78,6 +80,17 @@ PStruct* p_object_struct_new(PString* name) {
 }
 
 /**
+ * @brief Allocates and returns a new struct instance object.
+ */
+PStructInstance* p_object_struct_instance_new(PStruct* template) {
+  PStructInstance* instance = malloc(sizeof(PStructInstance));
+  instance->base = *p_object_new(P_OBJ_STRUCT_INSTANCE);
+  instance->template = template;
+  instance->values = malloc(sizeof(Value) * template->fields->count);
+  return instance;
+}
+
+/**
  * @brief Outputs the objects type to stdout.
  * 
  * @param type the type of the object
@@ -92,6 +105,9 @@ void p_object_type_print(PObjectType type) {
       break;
     case P_OBJ_STRUCT:
       printf("struct");
+      break;
+    case P_OBJ_STRUCT_INSTANCE:
+      printf("struct instance");
       break;
     default:
       printf("object");
@@ -114,6 +130,9 @@ void p_object_print(PObject* object) {
       break;
     case P_OBJ_STRUCT:
       printf("<struct %p>", object);
+      break;
+    case P_OBJ_STRUCT_INSTANCE:
+      printf("<struct instance %p>", object);
       break;
     default:
       printf("<object %p>", object);
@@ -143,6 +162,10 @@ void p_object_free(PObject* object) {
       hash_table_free(struct_->fields);
       free(struct_->fields);
       break;
+    }
+    case P_OBJ_STRUCT_INSTANCE: {
+      PStructInstance* instance = (PStructInstance*)object;
+      free(instance->values);
     }
     default:
       break;

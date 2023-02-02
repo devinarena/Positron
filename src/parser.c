@@ -263,6 +263,24 @@ static bool type_check_single(Value* a, enum ValueType type, bool message) {
  * type is not a valid parameter type.
  */
 static short parameter_type() {
+  // handles custom types (e.g. structs and classes)
+  if (match(TOKEN_IDENTIFIER)) {
+    Token name = parser.previous;
+    Value* val = hash_table_get_n(&parser.globals, name.start, name.length);
+    if (val == NULL) {
+      parse_error("Undefined type '");
+      token_print_lexeme(&name);
+      printf("'\n");
+      return -1;
+    }
+    if (val->type != VAL_OBJ) {
+      parse_error("Expected type but received ");
+      value_print(val);
+      printf("\n");
+      return -1;
+    }
+    return VAL_OBJ;
+  }
   if (!(match(TOKEN_I32) || match(TOKEN_F32) || match(TOKEN_BOOL) ||
         match(TOKEN_STR) || match(TOKEN_VOID))) {
     return -1;
@@ -575,54 +593,14 @@ static Value binary(Value* lhs, bool canAssign) {
 }
 
 /**
- * @brief Parses an assignment expression.
- * TODO: Deprecated? Probably wont use this now
+ * @brief Descent case for calling a function. Calls the function and returns
+ * its result.
  *
+ * @param fun the function to call
+ * @return Value the result of the function call
  */
-// static Value assignment(Value* lhs, bool canAssign) {
-//   Token* name = &parser.previous;
-//   int index = get_local(name);
-
-//   const char* name_start = name->start;
-//   const int name_length = name->length;
-//   Value v_var_name = value_new_object(
-//       (PObject*)p_object_string_new_n(name_start, name_length));
-
-//   match(TOKEN_EQUAL);
-//   block_new_opcode(parser.function->block, OP_POP);
-//   Value rhs = expression(PREC_ASSIGNMENT);
-
-//   if (parser.scope) {
-//     if (index != -1) {
-//       block_new_opcodes(parser.function->block, OP_LOCAL_SET, index);
-//       return rhs;
-//     }
-//   }
-
-//   Value* val = hash_table_get(&parser.globals, TO_STRING(v_var_name)->value);
-//   if (!val) {
-//     parse_error("Undefined variable '%s'\n", TO_STRING(v_var_name)->value);
-//     return value_new_null();
-//   }
-
-//   block_new_opcodes(parser.function->block, OP_CONSTANT,
-//                     block_new_constant(parser.function->block, &v_var_name));
-//   block_new_opcode(parser.function->block, OP_GLOBAL_SET);
-
-//   return rhs;
-// }
-
-/**
- * @brief Descent case for function calls. Handled as an infix operator.
- */
-static Value call(Value* lhs, bool canAssign) {
-  PFunction* func = TO_FUNCTION(*lhs);
-  if (!IS_TYPE(*lhs, P_OBJ_FUNCTION)) {
-    parse_error("Expected function but got ");
-    value_type_print(lhs->type);
-    printf("\n");
-    return value_new_null();
-  }
+static Value call_function(Value* fun) {
+  PFunction* func = TO_FUNCTION(*fun);
   size_t argc = 0;
   while (!check(TOKEN_RPAREN)) {
     if (argc > 0) {
@@ -647,6 +625,58 @@ static Value call(Value* lhs, bool canAssign) {
   block_new_opcodes(parser.function->block, OP_CALL, argc);
 
   return func->returnType;
+}
+
+static Value call_struct(Value* lhs) {
+  PStruct* template = TO_STRUCT(*lhs);
+  PStructInstance* inst = p_object_struct_instance_new(template);
+
+  for (size_t i = 0; i < template->fields->count; i++) {
+    Entry* entry = &template->fields->entries[i];
+    if (entry == NULL || entry->value == NULL) continue;
+    inst->values[entry->value->data.integer_32] = *entry->value;
+  }
+
+  size_t index = 0;
+  while (!check(TOKEN_RPAREN)) {
+    Value val = expression(PREC_ASSIGNMENT);
+
+    if (!type_check(&val, &inst->values[index], true)) {
+      return value_new_null();
+    }
+
+    inst->values[index++] = val;
+  }
+
+  consume(TOKEN_RPAREN);
+
+  Value struct_instance = value_new_object(inst);
+
+  block_new_opcodes(
+      parser.function->block, OP_CONSTANT,
+      block_new_constant(parser.function->block, &struct_instance));
+  
+  return struct_instance;
+}
+
+/**
+ * @brief Descent case for function calls. Handled as an infix operator.
+ */
+static Value call(Value* lhs, bool canAssign) {
+  if (!type_check_single(lhs, VAL_OBJ, true))
+    return value_new_null();
+  PObject* obj = lhs->data.reference;
+  switch (obj->type) {
+    case P_OBJ_FUNCTION:
+      return call_function(lhs);
+    case P_OBJ_STRUCT:
+      return call_struct(lhs);
+    default:
+      parse_error("Cannot call object of type ");
+      p_object_type_print(obj->type);
+      printf("\n");
+      return value_new_null();
+  }
 }
 
 /**

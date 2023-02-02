@@ -13,12 +13,14 @@
 
 #define TO_STRING(val) ((PString*)(val).data.reference)
 #define TO_FUNCTION(val) ((PFunction*)(val).data.reference)
+#define TO_STRUCT(val) ((PStruct*)(val).data.reference)
 
 #include <stdint.h>
 
 #include "block.h"
 #include "value.h"
 #include "hash_table.h"
+#include "dyn_list.h"
 
 typedef enum PObjectType {
   P_OBJ,
@@ -57,7 +59,7 @@ typedef struct PStruct {
 typedef struct PStructInstance {
   PObject base;
   PStruct* template;
-  dyn_list* values;
+  Value* values;
 } PStructInstance;
 
 // allocates and returns a new PObject.
@@ -69,6 +71,8 @@ PString* p_object_string_new(const char* data);
 PFunction* p_object_function_new(PString* name, Value returnType);
 // allocates and returns a new PStruct.
 PStruct* p_object_struct_new(PString* name);
+// allocates and returns a new PStruct
+PStructInstance* p_object_struct_instance_new(PStruct* template);
 // prints the type of the given PObject.
 void p_object_type_print(PObjectType type);
 // prints the given PObject.
