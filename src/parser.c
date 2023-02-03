@@ -91,8 +91,8 @@ static void consume(enum TokenType type) {
  * @param message The error message to print.
  */
 void parse_error(const char* format, ...) {
-  printf("[line %d] Error at '", parser.previous.line);
-  token_print_lexeme(&parser.previous);
+  printf("[line %d] Error at '", parser.current.line);
+  token_print_lexeme(&parser.current);
   printf("': ");
   va_list args;
   va_start(args, format);
@@ -264,8 +264,8 @@ static bool type_check_single(Value* a, enum ValueType type, bool message) {
  */
 static short parameter_type() {
   // handles custom types (e.g. structs and classes)
-  if (match(TOKEN_IDENTIFIER)) {
-    Token name = parser.previous;
+  if (check(TOKEN_IDENTIFIER)) {
+    Token name = parser.current;
     Value* val = hash_table_get_n(&parser.globals, name.start, name.length);
     if (val == NULL) {
       parse_error("Undefined type '");
@@ -274,11 +274,13 @@ static short parameter_type() {
       return -1;
     }
     if (val->type != VAL_OBJ) {
-      parse_error("Expected type but received ");
-      value_print(val);
-      printf("\n");
       return -1;
     }
+    PObject* obj = val->data.reference;
+    if (obj->type != P_OBJ_STRUCT) {
+      return -1;
+    }
+    advance();
     return VAL_OBJ;
   }
   if (!(match(TOKEN_I32) || match(TOKEN_F32) || match(TOKEN_BOOL) ||
@@ -629,34 +631,46 @@ static Value call_function(Value* fun) {
 
 static Value call_struct(Value* lhs) {
   PStruct* template = TO_STRUCT(*lhs);
-  PStructInstance* inst = p_object_struct_instance_new(template);
 
-  for (size_t i = 0; i < template->fields->count; i++) {
+  Value* fieldArray = malloc(sizeof(Value) * template->fields->count);
+
+  for (int i = 0; i < template->fields->capacity; i++) {
     Entry* entry = &template->fields->entries[i];
-    if (entry == NULL || entry->value == NULL) continue;
-    inst->values[entry->value->data.integer_32] = *entry->value;
+    if (entry == NULL || entry->value == NULL)
+      continue;
+    fieldArray[entry->value->data.integer_32] = *entry->value;
   }
 
-  size_t index = 0;
+  size_t fields = 0;
   while (!check(TOKEN_RPAREN)) {
+    if (fields > 0) {
+      consume(TOKEN_COMMA);
+    }
+
     Value val = expression(PREC_ASSIGNMENT);
 
-    if (!type_check(&val, &inst->values[index], true)) {
+    if (!type_check(&val, &fieldArray[fields], true)) {
       return value_new_null();
     }
 
-    inst->values[index++] = val;
+    fieldArray[fields++] = val;
+  }
+
+  if (fields != template->fields->count) {
+    parse_error("Struct '");
+    p_object_print((PObject*)template);
+    printf("' expects %d fields but got %lld\n", template->fields->count,
+           fields);
+    return value_new_null();
   }
 
   consume(TOKEN_RPAREN);
 
-  Value struct_instance = value_new_object(inst);
+  block_new_opcodes(parser.function->block, OP_CALL, fields);
 
-  block_new_opcodes(
-      parser.function->block, OP_CONSTANT,
-      block_new_constant(parser.function->block, &struct_instance));
-  
-  return struct_instance;
+  free(fieldArray);
+
+  return value_new_object(p_object_struct_instance_new(template));
 }
 
 /**
@@ -922,7 +936,8 @@ static void statement_while() {
 }
 
 /**
- * @brief Parses a for statement, initializer, conditional, and post expression.
+ * @brief Parses a for statement, initializer, conditional, and post
+ * expression.
  *
  * TODO: this... probably needs to be refactored
  */

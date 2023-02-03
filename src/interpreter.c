@@ -81,6 +81,36 @@ static void pop_frame() {
   interpreter.fp--;
 }
 
+static void call_object(CallFrame** frame, Value obj, size_t arg_count) {
+  PObject* object = (PObject*)obj.data.reference;
+  switch (object->type) {
+    case P_OBJ_FUNCTION: {
+      (*frame)->ip += 2;
+      push_frame(
+          (CallFrame){.ip = 0, .function = (PFunction*)object});
+      (*frame) = &interpreter.frames[interpreter.fp - 1];
+      (*frame)->slots = &interpreter.stack[interpreter.sp - arg_count];
+      (*frame)->slotCount = arg_count;
+      break;
+    }
+    case P_OBJ_STRUCT: {
+      (*frame)->ip += 2;
+      PStructInstance* instance = p_object_struct_instance_new((PStruct*)object);
+      pop_stack(); // pop the struct template
+      for (size_t i = 0; i < arg_count; i++) {
+        Value value = pop_stack();
+        instance->values[i] = value;
+      }
+      push_stack(value_new_object((PObject*)instance));
+      break;
+    }
+    default: {
+      printf("Expected callable object type.");
+      exit(1);
+    }
+  }
+}
+
 /**
  * @brief Interprets the emitted opcodes of a frame->function.
  *
@@ -131,17 +161,12 @@ InterpretResult interpret(PFunction* function) {
       case OP_CALL: {
         uint8_t arg_count =
             *(uint8_t*)frame->function->block->opcodes->data[frame->ip + 1];
-        Value fun = peek_stack(arg_count);
-        if (!IS_TYPE(fun, P_OBJ_FUNCTION)) {
-          printf("Cannot call non-function");
+        Value callable = peek_stack(arg_count);
+        if (callable.type != VAL_OBJ) {
+          printf("Expected callable object type.");
           exit(1);
         }
-        frame->ip += 2;
-        push_frame(
-            (CallFrame){.ip = 0, .function = (PFunction*)fun.data.reference});
-        frame = &interpreter.frames[interpreter.fp - 1];
-        frame->slots = &interpreter.stack[interpreter.sp - arg_count];
-        frame->slotCount = arg_count;
+        call_object(&frame, callable, arg_count);
         break;
       }
       case OP_RETURN: {
@@ -252,63 +277,72 @@ InterpretResult interpret(PFunction* function) {
       case OP_ADD_FLOATING_32: {
         Value v2 = pop_stack();
         Value v1 = pop_stack();
-        push_stack(value_new_float_32(v1.data.floating_32 + v2.data.floating_32));
+        push_stack(
+            value_new_float_32(v1.data.floating_32 + v2.data.floating_32));
         frame->ip++;
         break;
       }
       case OP_SUBTRACT_FLOATING_32: {
         Value v2 = pop_stack();
         Value v1 = pop_stack();
-        push_stack(value_new_float_32(v1.data.floating_32 - v2.data.floating_32));
+        push_stack(
+            value_new_float_32(v1.data.floating_32 - v2.data.floating_32));
         frame->ip++;
         break;
       }
       case OP_MULTIPLY_FLOATING_32: {
         Value v2 = pop_stack();
         Value v1 = pop_stack();
-        push_stack(value_new_float_32(v1.data.floating_32 * v2.data.floating_32));
+        push_stack(
+            value_new_float_32(v1.data.floating_32 * v2.data.floating_32));
         frame->ip++;
         break;
       }
       case OP_DIVIDE_FLOATING_32: {
         Value v2 = pop_stack();
         Value v1 = pop_stack();
-        push_stack(value_new_float_32(v1.data.floating_32 / v2.data.floating_32));
+        push_stack(
+            value_new_float_32(v1.data.floating_32 / v2.data.floating_32));
         frame->ip++;
         break;
       }
       case OP_COMPARE_FLOATING_32: {
         Value v2 = pop_stack();
         Value v1 = pop_stack();
-        push_stack(value_new_boolean(v1.data.floating_32 == v2.data.floating_32));
+        push_stack(
+            value_new_boolean(v1.data.floating_32 == v2.data.floating_32));
         frame->ip++;
         break;
       }
       case OP_GREATER_FLOATING_32: {
         Value v2 = pop_stack();
         Value v1 = pop_stack();
-        push_stack(value_new_boolean(v1.data.floating_32 > v2.data.floating_32));
+        push_stack(
+            value_new_boolean(v1.data.floating_32 > v2.data.floating_32));
         frame->ip++;
         break;
       }
       case OP_LESS_FLOATING_32: {
         Value v2 = pop_stack();
         Value v1 = pop_stack();
-        push_stack(value_new_boolean(v1.data.floating_32 < v2.data.floating_32));
+        push_stack(
+            value_new_boolean(v1.data.floating_32 < v2.data.floating_32));
         frame->ip++;
         break;
       }
       case OP_GREATER_EQUAL_FLOATING_32: {
         Value v2 = pop_stack();
         Value v1 = pop_stack();
-        push_stack(value_new_boolean(v1.data.floating_32 >= v2.data.floating_32));
+        push_stack(
+            value_new_boolean(v1.data.floating_32 >= v2.data.floating_32));
         frame->ip++;
         break;
       }
       case OP_LESS_EQUAL_FLOATING_32: {
         Value v2 = pop_stack();
         Value v1 = pop_stack();
-        push_stack(value_new_boolean(v1.data.floating_32 <= v2.data.floating_32));
+        push_stack(
+            value_new_boolean(v1.data.floating_32 <= v2.data.floating_32));
         frame->ip++;
         break;
       }
