@@ -220,6 +220,9 @@ static int new_local(Token* name, Value* value) {
  */
 static bool type_check(Value* a, Value* b, bool message) {
   if (a->type == VAL_OBJ && b->type == VAL_OBJ) {
+    if (a->data.reference == NULL || b->data.reference == NULL) {
+      return true;
+    }
     if (a->data.reference->type == b->data.reference->type)
       return true;
   } else if (a->type == b->type)
@@ -480,7 +483,7 @@ static Value or (Value * lhs, bool canAssign) {
   return rhs;
 }
 
-#define BINARY_OP_A(op, type)                                            \
+#define BINARY_OP_A(rhs, op, type)                                       \
   switch ((op)) {                                                        \
     case TOKEN_PLUS: {                                                   \
       block_new_opcode(parser.function->block, OP_ADD_##type);           \
@@ -500,27 +503,33 @@ static Value or (Value * lhs, bool canAssign) {
     }                                                                    \
     case TOKEN_GREATER: {                                                \
       block_new_opcode(parser.function->block, OP_GREATER_##type);       \
+      (*rhs) = value_new_boolean(true);                                  \
       break;                                                             \
     }                                                                    \
     case TOKEN_LESS: {                                                   \
       block_new_opcode(parser.function->block, OP_LESS_##type);          \
+      (*rhs) = value_new_boolean(true);                                  \
       break;                                                             \
     }                                                                    \
     case TOKEN_GREATER_EQUAL: {                                          \
       block_new_opcode(parser.function->block, OP_GREATER_EQUAL_##type); \
+      (*rhs) = value_new_boolean(true);                                  \
       break;                                                             \
     }                                                                    \
     case TOKEN_LESS_EQUAL: {                                             \
       block_new_opcode(parser.function->block, OP_LESS_EQUAL_##type);    \
+      (*rhs) = value_new_boolean(true);                                  \
       break;                                                             \
     }                                                                    \
     case TOKEN_EQUAL_EQUAL: {                                            \
       block_new_opcode(parser.function->block, OP_COMPARE_##type);       \
+      (*rhs) = value_new_boolean(true);                                  \
       break;                                                             \
     }                                                                    \
     case TOKEN_NOT_EQUAL: {                                              \
       block_new_opcode(parser.function->block, OP_COMPARE_##type);       \
       block_new_opcode(parser.function->block, OP_NOT);                  \
+      (*rhs) = value_new_boolean(true);                                  \
       break;                                                             \
     }                                                                    \
     default:                                                             \
@@ -539,13 +548,13 @@ static Value binary(Value* lhs, bool canAssign) {
     case VAL_INTEGER_32: {
       switch (rhs.type) {
         case VAL_INTEGER_32: {
-          BINARY_OP_A(prev, INTEGER_32);
+          BINARY_OP_A(&rhs, prev, INTEGER_32);
           break;
         }
         case VAL_FLOATING_32: {
           block_new_opcodes_3(parser.function->block, OP_SWAP, OP_I32_TO_F32,
                               OP_SWAP);
-          BINARY_OP_A(prev, FLOATING_32);
+          BINARY_OP_A(&rhs, prev, FLOATING_32);
           break;
         }
         default: {
@@ -562,12 +571,12 @@ static Value binary(Value* lhs, bool canAssign) {
     case VAL_FLOATING_32: {
       switch (rhs.type) {
         case VAL_FLOATING_32: {
-          BINARY_OP_A(prev, FLOATING_32);
+          BINARY_OP_A(&rhs, prev, FLOATING_32);
           break;
         }
         case VAL_INTEGER_32: {
           block_new_opcode(parser.function->block, OP_I32_TO_F32);
-          BINARY_OP_A(prev, FLOATING_32);
+          BINARY_OP_A(&rhs, prev, FLOATING_32);
           break;
         }
         default: {
@@ -719,7 +728,8 @@ static Value dot(Value* lhs, bool canAssign) {
 
       if (canAssign && match(TOKEN_EQUAL)) {
         Value value = expression(PREC_ASSIGNMENT);
-        if (!type_check(&value, &instance->slots[fieldIndex->data.integer_32], true))
+        if (!type_check(&value, &instance->slots[fieldIndex->data.integer_32],
+                        true))
           return value_new_null();
         block_new_opcodes(parser.function->block, OP_STRUCT_SET,
                           fieldIndex->data.integer_32);
