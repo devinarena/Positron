@@ -86,7 +86,14 @@ PStructInstance* p_object_struct_instance_new(PStruct* template) {
   PStructInstance* instance = malloc(sizeof(PStructInstance));
   instance->base = *p_object_new(P_OBJ_STRUCT_INSTANCE);
   instance->template = template;
-  instance->values = malloc(sizeof(Value) * template->fields->count);
+  instance->slots = malloc(sizeof(Value) * template->fields->count);
+
+  for (int i = 0; i < template->fields->capacity; i++) {
+    Entry* entry = &template->fields->entries[i];
+    if (entry->key == NULL || entry->value == NULL) continue;
+    instance->slots[entry->value->data.integer_32] = *entry->value;
+  }
+
   return instance;
 }
 
@@ -165,7 +172,7 @@ void p_object_free(PObject* object) {
     }
     case P_OBJ_STRUCT_INSTANCE: {
       PStructInstance* instance = (PStructInstance*)object;
-      free(instance->values);
+      free(instance->slots);
     }
     default:
       break;

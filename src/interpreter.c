@@ -96,11 +96,11 @@ static void call_object(CallFrame** frame, Value obj, size_t arg_count) {
     case P_OBJ_STRUCT: {
       (*frame)->ip += 2;
       PStructInstance* instance = p_object_struct_instance_new((PStruct*)object);
-      pop_stack(); // pop the struct template
       for (size_t i = 0; i < arg_count; i++) {
         Value value = pop_stack();
-        instance->values[i] = value;
+        instance->slots[i] = value;
       }
+      pop_stack(); // pop the struct template
       push_stack(value_new_object((PObject*)instance));
       break;
     }
@@ -406,6 +406,23 @@ InterpretResult interpret(PFunction* function) {
         frame->slots[index] = peek_stack(0);
         if (interpreter.sp > (frame->slots - interpreter.stack) + index + 1)
           pop_stack();
+        frame->ip++;
+        break;
+      }
+      case OP_STRUCT_GET: {
+        uint8_t index = *(uint8_t*)frame->function->block->opcodes->data[++frame->ip];
+        Value struct_value = pop_stack();
+        PStructInstance* instance = TO_STRUCT_INSTANCE(struct_value);
+        push_stack(instance->slots[index]);
+        frame->ip++;
+        break;
+      }
+      case OP_STRUCT_SET: {
+        uint8_t index = *(uint8_t*)frame->function->block->opcodes->data[++frame->ip];
+        Value value = pop_stack();
+        Value struct_value = pop_stack();
+        PStructInstance* instance = TO_STRUCT_INSTANCE(struct_value);
+        instance->slots[index] = value;
         frame->ip++;
         break;
       }

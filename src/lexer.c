@@ -299,6 +299,11 @@ Token lexer_next_token() {
       lexer.index++;
       break;
     }
+    case '.': {
+      token = make_token(TOKEN_DOT, schar, 1);
+      lexer.index++;
+      break;
+    }
     case '\0': {
       token = make_token(TOKEN_EOF, schar, 1);
       lexer.index++;

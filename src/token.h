@@ -52,6 +52,7 @@ enum TokenType {
   TOKEN_GREATER,
   TOKEN_LESS,
   TOKEN_COMMA,
+  TOKEN_DOT,
 
   // double character tokens
   TOKEN_EQUAL_EQUAL,

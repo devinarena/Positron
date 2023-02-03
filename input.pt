@@ -3,8 +3,10 @@ struct Test {
     i32 a;
 }
 
-vd test() {
-    print Test;
-}
+Test test = Test(0)
 
-test()
+print test.a
+
+test.a = 5
+
+print test.a

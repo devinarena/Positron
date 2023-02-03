@@ -62,6 +62,8 @@ enum OpCode {
     // Two bytes
     OP_CONSTANT,
     OP_CALL,
+    OP_STRUCT_GET,
+    OP_STRUCT_SET,
 
     // Three bytes
     OP_JUMP,

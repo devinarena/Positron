@@ -14,6 +14,7 @@
 #define TO_STRING(val) ((PString*)(val).data.reference)
 #define TO_FUNCTION(val) ((PFunction*)(val).data.reference)
 #define TO_STRUCT(val) ((PStruct*)(val).data.reference)
+#define TO_STRUCT_INSTANCE(val) ((PStructInstance*)(val).data.reference)
 
 #include <stdint.h>
 
@@ -59,7 +60,7 @@ typedef struct PStruct {
 typedef struct PStructInstance {
   PObject base;
   PStruct* template;
-  Value* values;
+  Value* slots;
 } PStructInstance;
 
 // allocates and returns a new PObject.

@@ -91,8 +91,8 @@ static void consume(enum TokenType type) {
  * @param message The error message to print.
  */
 void parse_error(const char* format, ...) {
-  printf("[line %d] Error at '", parser.current.line);
-  token_print_lexeme(&parser.current);
+  printf("[line %d] Error at '", parser.previous.line);
+  token_print_lexeme(&parser.previous);
   printf("': ");
   va_list args;
   va_start(args, format);
@@ -694,6 +694,52 @@ static Value call(Value* lhs, bool canAssign) {
 }
 
 /**
+ * @brief Descent for dot operator. Handles accessing fields of a struct or
+ * class.
+ */
+static Value dot(Value* lhs, bool canAssign) {
+  if (!type_check_single(lhs, VAL_OBJ, true))
+    return value_new_null();
+  PObject* obj = lhs->data.reference;
+  switch (obj->type) {
+    case P_OBJ_STRUCT_INSTANCE: {
+      PStructInstance* instance = TO_STRUCT_INSTANCE(*lhs);
+      consume(TOKEN_IDENTIFIER);
+      Value* fieldIndex =
+          hash_table_get_n(instance->template->fields, parser.previous.start,
+                           parser.previous.length);
+
+      if (fieldIndex == NULL) {
+        parse_error("Struct '");
+        p_object_print((PObject*)instance->template);
+        printf("' has no field named '%.*s'\n", parser.previous.length,
+               parser.previous.start);
+        return value_new_null();
+      }
+
+      if (canAssign && match(TOKEN_EQUAL)) {
+        Value value = expression(PREC_ASSIGNMENT);
+        if (!type_check(&value, &instance->slots[fieldIndex->data.integer_32], true))
+          return value_new_null();
+        block_new_opcodes(parser.function->block, OP_STRUCT_SET,
+                          fieldIndex->data.integer_32);
+        return value;
+      } else {
+        Value field = instance->slots[fieldIndex->data.integer_32];
+        block_new_opcodes(parser.function->block, OP_STRUCT_GET,
+                          fieldIndex->data.integer_32);
+        return field;
+      }
+    }
+    default:
+      parse_error("Cannot access field of object of type ");
+      p_object_type_print(obj->type);
+      printf("\n");
+      return value_new_null();
+  }
+}
+
+/**
  * @brief Expression level parsing, handles operators and expressions based on
  * precedence.
  *
@@ -1251,6 +1297,7 @@ ParseRule rules[] = {
     [TOKEN_GREATER] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_LESS] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_COMMA] = {NULL, NULL, PREC_NONE},
+    [TOKEN_DOT] = {NULL, dot, PREC_CALL},
 
     [TOKEN_EQUAL_EQUAL] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_NOT_EQUAL] = {NULL, binary, PREC_COMPARISON},
