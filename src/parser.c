@@ -641,10 +641,10 @@ static Value call_function(Value* fun) {
 static Value call_struct(Value* lhs) {
   PStruct* template = TO_STRUCT(*lhs);
 
-  Value* fieldArray = malloc(sizeof(Value) * template->fields->count);
+  Value* fieldArray = malloc(sizeof(Value) * template->fields.count);
 
-  for (int i = 0; i < template->fields->capacity; i++) {
-    Entry* entry = &template->fields->entries[i];
+  for (int i = 0; i < template->fields.capacity; i++) {
+    Entry* entry = &template->fields.entries[i];
     if (entry == NULL || entry->value == NULL)
       continue;
     fieldArray[entry->value->data.integer_32] = *entry->value;
@@ -665,10 +665,10 @@ static Value call_struct(Value* lhs) {
     fieldArray[fields++] = val;
   }
 
-  if (fields != template->fields->count) {
+  if (fields != template->fields.count) {
     parse_error("Struct '");
     p_object_print((PObject*)template);
-    printf("' expects %d fields but got %lld\n", template->fields->count,
+    printf("' expects %d fields but got %lld\n", template->fields.count,
            fields);
     return value_new_null();
   }
@@ -715,7 +715,7 @@ static Value dot(Value* lhs, bool canAssign) {
       PStructInstance* instance = TO_STRUCT_INSTANCE(*lhs);
       consume(TOKEN_IDENTIFIER);
       Value* fieldIndex =
-          hash_table_get_n(instance->template->fields, parser.previous.start,
+          hash_table_get_n(&instance->template->fields, parser.previous.start,
                            parser.previous.length);
 
       if (fieldIndex == NULL) {
@@ -1124,7 +1124,7 @@ static void statement_struct() {
 
     PString* name = p_object_string_new_n(identifier.start, identifier.length);
     Value iValue = (Value){.type = type, .data.integer_32 = index++};
-    hash_table_set(pstruct->fields, name->value, &iValue);
+    hash_table_set(&pstruct->fields, name->value, &iValue);
   }
 
   Value nameValue = value_new_object(name);

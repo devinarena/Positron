@@ -21,6 +21,7 @@ Interpreter interpreter;
 void interpreter_init() {
   interpreter.fp = 0;
   interpreter.sp = 0;
+  interpreter.heap = NULL;
   hash_table_init(&interpreter.globals);
 }
 
@@ -527,4 +528,12 @@ void interpreter_print() {
  */
 void interpreter_free() {
   hash_table_free(&interpreter.globals);
+
+  // Free the heap
+  PObject* object = interpreter.heap;
+  while (object != NULL) {
+    PObject* next = object->next;
+    p_object_free(object);
+    object = next;
+  }
 }

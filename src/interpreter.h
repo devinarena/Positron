@@ -34,7 +34,10 @@ typedef struct Interpreter {
     Value stack[STACK_SIZE];
     HashTable globals;
     CallFrame frames[MAX_FRAMES];
+    PObject* heap;
 } Interpreter;
+
+extern Interpreter interpreter;
 
 // Initialize the interpreter's memory.
 void interpreter_init();

@@ -10,27 +10,27 @@
 #include <string.h>
 
 #include "object.h"
+#include "interpreter.h"
 
-/**
- * @brief Allocates and returns a new object.
- * 
- * TODO: Figure out heap issue
- *
- * @param type the type of the object
- * @return Object* a pointer to the newly allocated object
- */
-PObject* p_object_new(PObjectType type) {
-  PObject* object = malloc(sizeof(PObject));
+
+static PObject* _p_object_new(PObjectType type, size_t size) {
+  PObject* object = malloc(size);
   object->type = type;
+
+  object->next = interpreter.heap;
+  interpreter.heap = object;
+
   return object;
 }
+
+#define p_object_new(type, objType) \
+  (type*)_p_object_new(objType, sizeof(type))
 
 /**
  * @brief Allocates and returns a new string object.
  */
 PString* p_object_string_new_n(const char* data, size_t length) {
-  PString* string = malloc(sizeof(PString));
-  string->base = *p_object_new(P_OBJ_STRING);
+  PString* string = p_object_new(PString, P_OBJ_STRING);
   string->length = length;
 
   string->value = malloc(length + 1);
@@ -47,8 +47,7 @@ PString* p_object_string_new_n(const char* data, size_t length) {
  * @return PString* the newly allocated string
  */
 PString* p_object_string_new(const char* data) {
-  PString* string = malloc(sizeof(PString));
-  string->base = *p_object_new(P_OBJ_STRING);
+  PString* string = p_object_new(PString, P_OBJ_STRING);
   string->length = strlen(data);
   string->value = strdup(data);
   return string;
@@ -58,8 +57,7 @@ PString* p_object_string_new(const char* data) {
  * @brief Allocates and returns a new function object.
  */
 PFunction* p_object_function_new(PString* name, Value returnType) {
-  PFunction* function = malloc(sizeof(PFunction));
-  function->base = *p_object_new(P_OBJ_FUNCTION);
+  PFunction* function = p_object_new(PFunction, P_OBJ_FUNCTION);
   function->name = name;
   function->arity = 0;
   function->block = block_new();
@@ -71,11 +69,9 @@ PFunction* p_object_function_new(PString* name, Value returnType) {
  * @brief Allocates and returns a new struct object.
  */
 PStruct* p_object_struct_new(PString* name) {
-  PStruct* struct_ = malloc(sizeof(PStruct));
-  struct_->base = *p_object_new(P_OBJ_STRUCT);
+  PStruct* struct_ = p_object_new(PStruct, P_OBJ_STRUCT);
   struct_->name = name;
-  struct_->fields = malloc(sizeof(HashTable));
-  hash_table_init(struct_->fields);
+  hash_table_init(&struct_->fields);
   return struct_;
 }
 
@@ -83,13 +79,12 @@ PStruct* p_object_struct_new(PString* name) {
  * @brief Allocates and returns a new struct instance object.
  */
 PStructInstance* p_object_struct_instance_new(PStruct* template) {
-  PStructInstance* instance = malloc(sizeof(PStructInstance));
-  instance->base = *p_object_new(P_OBJ_STRUCT_INSTANCE);
+  PStructInstance* instance = p_object_new(PStructInstance, P_OBJ_STRUCT_INSTANCE);
   instance->template = template;
-  instance->slots = malloc(sizeof(Value) * template->fields->count);
+  instance->slots = malloc(sizeof(Value) * template->fields.count);
 
-  for (int i = 0; i < template->fields->capacity; i++) {
-    Entry* entry = &template->fields->entries[i];
+  for (int i = 0; i < template->fields.capacity; i++) {
+    Entry* entry = &template->fields.entries[i];
     if (entry->key == NULL || entry->value == NULL) continue;
     instance->slots[entry->value->data.integer_32] = *entry->value;
   }
@@ -166,13 +161,13 @@ void p_object_free(PObject* object) {
     case P_OBJ_STRUCT: {
       PStruct* struct_ = (PStruct*)object;
       p_object_free((PObject*)struct_->name);
-      hash_table_free(struct_->fields);
-      free(struct_->fields);
+      hash_table_free(&struct_->fields);
       break;
     }
     case P_OBJ_STRUCT_INSTANCE: {
       PStructInstance* instance = (PStructInstance*)object;
       free(instance->slots);
+      break;
     }
     default:
       break;

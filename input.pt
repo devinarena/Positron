@@ -1,10 +1,14 @@
 
-struct Frick {
-    i32 a;
+struct Coin {
+    i32 value;
 }
 
-Frick frack = Frick(0);
+Coin penny = Coin(1)
+Coin nickel = Coin(5)
+Coin dime = Coin(10)
+Coin quarter = Coin(25)
 
-for (; frack.a < 10; frack.a = frack.a + 1) {
-    print frack.a
-}
+print penny.value
+print nickel.value
+print dime.value
+print quarter.value
