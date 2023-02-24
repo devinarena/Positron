@@ -44,7 +44,9 @@ ValueType value_type_from_token_type(enum TokenType type);
 // prints a value's data
 void value_print(Value* value);
 // prints the type of a value
-void value_type_print(enum ValueType value);
+void value_print_type(Value* value);
+// prints the type of a ValueType
+void value_type_print_type(enum ValueType value);
 // frees the memory allocated by a value
 void value_free(Value* value);
 

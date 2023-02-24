@@ -6,11 +6,11 @@
  * @since Represents a value in the language, such as a number, string, etc.
  **/
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-#include "value.h"
 #include "object.h"
+#include "value.h"
 
 /**
  * @brief Returns the truthiness of a value.
@@ -46,12 +46,12 @@ bool value_is_truthy(Value* value) {
  */
 Value* value_clone(Value* value) {
   Value* clone = malloc(sizeof(Value));
-  
+
   if (!clone) {
     printf("Failed to allocate memory for value clone.\n");
     exit(1);
   }
-  
+
   clone->type = value->type;
   clone->data = value->data;
 
@@ -60,7 +60,7 @@ Value* value_clone(Value* value) {
 
 /**
  * @brief Gets the value type associated with a token type.
- * 
+ *
  * @param type the token type
  * @return enum ValueType the value type
  */
@@ -121,7 +121,23 @@ void value_print(Value* value) {
  *
  * @param value the value to print
  */
-void value_type_print(enum ValueType type) {
+void value_print_type(Value* value) {
+  switch (value->type) {
+    case VAL_OBJ:
+      p_object_type_print(value->data.reference);
+      break;
+    default:
+      value_type_print_type(value->type);
+      break;
+  }
+}
+
+/**
+ * @brief Prints the type of a value type (the enum)
+ * 
+ * @param type the value type to print
+ */
+void value_type_print_type(enum ValueType type) {
   switch (type) {
     case VAL_NULL:
       printf("null");
@@ -143,8 +159,6 @@ void value_type_print(enum ValueType type) {
       break;
   }
 }
-
-
 
 /**
  * @brief Frees the memory allocated by a value.

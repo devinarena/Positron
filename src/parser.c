@@ -229,9 +229,9 @@ static bool type_check(Value* a, Value* b, bool message) {
     return true;
   if (message) {
     parse_error("Type mismatch: received ");
-    value_print(a);
+    value_print_type(a);
     printf(" but expected ");
-    value_print(b);
+    value_print_type(b);
     printf("\n");
   }
   return false;
@@ -251,9 +251,9 @@ static bool type_check_single(Value* a, enum ValueType type, bool message) {
     return true;
   if (message) {
     parse_error("Type mismatch: received ");
-    value_print(a);
+    value_print_type(a);
     printf(" but expected ");
-    value_type_print(type);
+    value_type_print_type(type);
     printf("\n");
   }
   return false;
@@ -422,7 +422,7 @@ static Value unary(bool canAssign) {
         block_new_opcode(parser.function->block, OP_NEGATE_INTEGER_32);
       } else {
         parse_error("Cannot negate value of type ");
-        value_type_print(val.type);
+        value_print_type(&val);
         printf("\n");
       }
       break;
@@ -559,9 +559,9 @@ static Value binary(Value* lhs, bool canAssign) {
         }
         default: {
           parse_error("Cannot perform binary operation on type ");
-          value_type_print(lhs->type);
+          value_print_type(lhs);
           printf(" and ");
-          value_type_print(rhs.type);
+          value_print_type(&rhs);
           printf("\n");
           return value_new_null();
         }
@@ -581,9 +581,9 @@ static Value binary(Value* lhs, bool canAssign) {
         }
         default: {
           parse_error("Cannot perform binary operation on type ");
-          value_type_print(lhs->type);
+          value_print_type(lhs);
           printf(" and ");
-          value_type_print(rhs.type);
+          value_print_type(&rhs);
           printf("\n");
           return value_new_null();
         }
@@ -592,9 +592,9 @@ static Value binary(Value* lhs, bool canAssign) {
     }
     default: {
       parse_error("Cannot perform binary operation on type ");
-      value_type_print(lhs->type);
+      value_print_type(lhs);
       printf(" and ");
-      value_type_print(rhs.type);
+      value_print_type(&rhs);
       printf("\n");
       return value_new_null();
     }
@@ -618,7 +618,7 @@ static Value call_function(Value* fun) {
       consume(TOKEN_COMMA);
     }
     Value arg = expression(PREC_ASSIGNMENT);
-    if (!type_check_single(&arg, func->parameters[argc].type, true))
+    if (!type_check(&arg, &func->parameters[argc], true))
       return value_new_null();
     argc++;
   }
@@ -696,7 +696,7 @@ static Value call(Value* lhs, bool canAssign) {
       return call_struct(lhs);
     default:
       parse_error("Cannot call object of type ");
-      p_object_type_print(obj->type);
+      p_object_type_print(obj);
       printf("\n");
       return value_new_null();
   }
@@ -743,7 +743,7 @@ static Value dot(Value* lhs, bool canAssign) {
     }
     default:
       parse_error("Cannot access field of object of type ");
-      p_object_type_print(obj->type);
+      p_object_type_print(obj);
       printf("\n");
       return value_new_null();
   }
@@ -839,20 +839,32 @@ static void statement_function(Value returnType) {
 
   parser.scope++;
   while (!match(TOKEN_RPAREN)) {
-    if (match(TOKEN_I32) || match(TOKEN_F32) || match(TOKEN_BOOL) ||
-        match(TOKEN_STR)) {
+    if (match(TOKEN_I32) || match(TOKEN_F32) || match(TOKEN_BOOL)) {
       ValueType type = value_type_from_token_type(parser.previous.type);
       consume(TOKEN_IDENTIFIER);
       const char* name = parser.previous.start;
       size_t length = parser.previous.length;
-      PString* pname = p_object_string_new_n(name, length);
-      Value pval = value_new_object((PObject*)pname);
       function->parameters[function->arity++] = (Value){.type = type};
       new_local(&parser.previous, &function->parameters[function->arity - 1]);
     } else {
-      parse_error("Expected parameter type but got '");
-      token_type_print(parser.previous.type);
-      printf("'\n");
+      // strings are custom-handled for now
+      if (match(TOKEN_STR)) {
+        consume(TOKEN_IDENTIFIER);
+        const char* name = parser.previous.start;
+        size_t length = parser.previous.length;
+        function->parameters[function->arity++] =
+            value_new_object((PObject*)p_object_string_new_n(name, length));
+        new_local(&parser.previous, &function->parameters[function->arity - 1]);
+      } else {
+        Value* type = hash_table_get_n(&parser.globals, name, length);
+        if (!type) {
+          parse_error("Expected parameter type but got '");
+          token_type_print(parser.previous.type);
+          printf("'\n");
+        }
+        function->parameters[function->arity++] = *type;
+        new_local(&parser.previous, &function->parameters[function->arity - 1]);
+      }
     }
     if (!check(TOKEN_RPAREN))
       consume(TOKEN_COMMA);
@@ -1024,7 +1036,7 @@ static void statement_for() {
     condition = expression(PREC_ASSIGNMENT);
     if (condition.type != VAL_BOOL) {
       parse_error("Expected value type VAL_BOOL but got ");
-      value_type_print(condition.type);
+      value_print_type(&condition);
       printf("\n");
       return;
     }

@@ -73,7 +73,7 @@ PStruct* p_object_struct_new(PString* name);
 // allocates and returns a new PStruct
 PStructInstance* p_object_struct_instance_new(PStruct* template);
 // prints the type of the given PObject.
-void p_object_type_print(PObjectType type);
+void p_object_type_print(PObject* object);
 // prints the given PObject.
 void p_object_print(PObject* object);
 // frees the given PObject.

@@ -97,8 +97,8 @@ PStructInstance* p_object_struct_instance_new(PStruct* template) {
  * 
  * @param type the type of the object
  */
-void p_object_type_print(PObjectType type) {
-  switch (type) {
+void p_object_type_print(PObject* object) {
+  switch (object->type) {
     case P_OBJ_STRING:
       printf("string");
       break;
@@ -127,7 +127,7 @@ void p_object_print(PObject* object) {
       break;
     case P_OBJ_FUNCTION:
       printf("<");
-      value_type_print((((PFunction*)object)->returnType).type);
+      value_print_type(&((PFunction*)object)->returnType);
       printf(" %s>", ((PFunction*)object)->name->value);
       break;
     case P_OBJ_STRUCT:

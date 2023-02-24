@@ -3,12 +3,12 @@ struct Coin {
     i32 value;
 }
 
-Coin penny = Coin(1)
-Coin nickel = Coin(5)
-Coin dime = Coin(10)
-Coin quarter = Coin(25)
+vd println(str s) {
+    print s
+}
 
-print penny.value
-print nickel.value
-print dime.value
-print quarter.value
+Coin a = Coin(1)
+
+str test = "Hello"
+
+println(a)
