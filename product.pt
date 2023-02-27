@@ -1,13 +1,14 @@
 
-i32 sum(i32[] a) {
-    i32 res = 0
-    for (i32 i = 0; i < 3; i++) {
-        res += a[i]
-    }
-    ret res
-}
 
-i32 main() {
-    i32[] a = [ 1, 2, 3 ]
-    wln(sum(a))
+bool contains_duplicate(i32[] nums) {
+    set<i32> seen = set()
+
+    for (i32 num : nums) {
+        if (seen.has(num)) {
+            ret true
+        }
+        seen.add(num)
+    }
+
+    ret false
 }

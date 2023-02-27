@@ -1,14 +1,9 @@
 
-struct Coin {
-    i32 value;
+
+struct Person {
+    str name;
 }
 
-vd println(str s) {
-    print s
-}
+Person devin = Person(Person)
 
-Coin a = Coin(1)
-
-str test = "Hello"
-
-println(a)
+print devin.name
