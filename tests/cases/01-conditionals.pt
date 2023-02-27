@@ -1,7 +1,7 @@
-i32 a = 5
+var a = 5
 
-bool override = false
-bool underride = true
+var override = false
+var underride = true
 
 if (a >= 0 || override) {
     print "true || false"

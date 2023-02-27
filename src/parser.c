@@ -132,17 +132,14 @@ static void synchronize() {
 
     switch (parser.current.type) {
       case TOKEN_PRINT:
-      case TOKEN_I32:
-      case TOKEN_F32:
-      case TOKEN_STR:
+      case TOKEN_VAR:
       case TOKEN_BOOL:
       case TOKEN_IF:
       case TOKEN_WHILE:
       case TOKEN_FOR:
-      case TOKEN_VOID:
+      case TOKEN_FUN:
       case TOKEN_RETURN:
       case TOKEN_SEMICOLON:
-      case TOKEN_STRUCT:
         return;
       default:
         break;
@@ -191,7 +188,7 @@ static int get_local(Token* name) {
  * @param value Value* the value of the local
  * @return int the index of the local
  */
-static int new_local(Token* name, Value* value) {
+static int new_local(Token* name) {
   if (parser.local_count == UINT8_MAX) {
     parse_error("Too many local variables in scope\n");
     return -1;
@@ -204,117 +201,28 @@ static int new_local(Token* name, Value* value) {
   }
   parser.locals[parser.local_count].name = *name;
   parser.locals[parser.local_count].depth = parser.scope;
-  parser.locals[parser.local_count].value = *value;
   parser.local_count++;
   return parser.local_count - 1;
 }
 
-/**
- * @brief Type checks two values.
- *
- * @param a a pointer to the first value
- * @param b a pointer to the second value
- * @param message whether or not to print an error message
- * @return true if the types match
- * @return false if the types do not match
- */
-static bool type_check(Value* a, Value* b, bool message) {
-  if (a->type == VAL_OBJ && b->type == VAL_OBJ) {
-    if (a->data.reference == NULL || b->data.reference == NULL) {
-      return true;
-    }
-    if (a->data.reference->type == b->data.reference->type)
-      return true;
-  } else if (a->type == b->type)
-    return true;
-  if (message) {
-    parse_error("Type mismatch: received ");
-    value_print_type(a);
-    printf(" but expected ");
-    value_print_type(b);
-    printf("\n");
-  }
-  return false;
-}
-
-/**
- * @brief Type checks a single value.
- *
- * @param a a pointer to the value
- * @param type the type to check against
- * @param message whether or not to print an error message
- * @return true if the types match
- * @return false if the types do not match
- */
-static bool type_check_single(Value* a, enum ValueType type, bool message) {
-  if (a->type == type)
-    return true;
-  if (message) {
-    parse_error("Type mismatch: received ");
-    value_print_type(a);
-    printf(" but expected ");
-    value_type_print_type(type);
-    printf("\n");
-  }
-  return false;
-}
-
-/**
- * @brief Helper for checking the type of a proposed parameter.
- *
- * @return short the ValueType associated with the token type or -1 if the token
- * type is not a valid parameter type.
- */
-static short parameter_type() {
-  // handles custom types (e.g. structs and classes)
-  if (check(TOKEN_IDENTIFIER)) {
-    Token name = parser.current;
-    Value* val = hash_table_get_n(&parser.globals, name.start, name.length);
-    if (val == NULL) {
-      parse_error("Undefined type '");
-      token_print_lexeme(&name);
-      printf("'\n");
-      return -1;
-    }
-    if (val->type != VAL_OBJ) {
-      return -1;
-    }
-    PObject* obj = val->data.reference;
-    if (obj->type != P_OBJ_STRUCT) {
-      return -1;
-    }
-    advance();
-    return VAL_OBJ;
-  }
-  if (!(match(TOKEN_I32) || match(TOKEN_F32) || match(TOKEN_BOOL) ||
-        match(TOKEN_STR) || match(TOKEN_VOID))) {
-    return -1;
-  }
-  return value_type_from_token_type(parser.previous.type);
-}
-
-static Value expression(Precedence prec);
+static void expression(Precedence prec);
 
 /**
  * @brief Parses a variable.
  */
-static Value variable(bool canAssign) {
+static void variable(bool canAssign) {
   Token token = parser.previous;
   if (parser.scope) {
     int index = get_local(&token);
 
     if (index != -1) {
       if (canAssign && match(TOKEN_EQUAL)) {
-        Value value = expression(PREC_ASSIGNMENT);
-        if (!type_check(&value, &parser.locals[index].value, true))
-          return value_new_null();
-        parser.locals[index].value = value;
+        expression(PREC_ASSIGNMENT);
         block_new_opcodes(parser.function->block, OP_LOCAL_SET, index);
-        return value;
       } else {
         block_new_opcodes(parser.function->block, OP_LOCAL_GET, index);
-        return parser.locals[index].value;
       }
+      return;
     }
   }
 
@@ -325,71 +233,53 @@ static Value variable(bool canAssign) {
     parse_error("Undefined variable '");
     token_print_lexeme(&token);
     printf("'\n");
-    return value_new_null();
+    return;
   }
 
   if (canAssign && match(TOKEN_EQUAL)) {
-    Value value = expression(PREC_ASSIGNMENT);
-    if (!type_check(&value, val, true))
-      return value_new_null();
+    expression(PREC_ASSIGNMENT);
     block_new_opcodes_3(parser.function->block, OP_CONSTANT,
                         block_new_constant(parser.function->block,
                                            &value_new_object((PObject*)name)),
                         OP_GLOBAL_SET);
-    return value;
   } else {
     block_new_opcodes_3(parser.function->block, OP_CONSTANT,
                         block_new_constant(parser.function->block,
                                            &value_new_object((PObject*)name)),
                         OP_GLOBAL_GET);
   }
-
-  return *val;
 }
 
 /**
  * @brief Parses a literal.
  */
-static Value literal(bool canAssign) {
+static void literal(bool canAssign) {
   enum TokenType type = parser.previous.type;
 
-  if (type == TOKEN_LITERAL_INTEGER) {
+  if (type == TOKEN_LITERAL_FLOATING) {
     char buffer[200];
     strncpy(buffer, parser.previous.start, parser.previous.length);
     buffer[parser.previous.length] = '\0';
-    Value val = value_new_int_32(atoi(buffer));
+    Value val = value_new_number(atof(buffer));
     uint8_t index = block_new_constant(parser.function->block, &val);
     block_new_opcodes(parser.function->block, OP_CONSTANT, index);
-    return val;
-  } else if (type == TOKEN_LITERAL_FLOATING) {
-    char buffer[200];
-    strncpy(buffer, parser.previous.start, parser.previous.length);
-    buffer[parser.previous.length] = '\0';
-    Value val = value_new_float_32(atof(buffer));
-    uint8_t index = block_new_constant(parser.function->block, &val);
-    block_new_opcodes(parser.function->block, OP_CONSTANT, index);
-    return val;
   } else if (type == TOKEN_LITERAL_STRING) {
     Value val = value_new_object((PObject*)p_object_string_new_n(
         parser.previous.start, parser.previous.length));
     uint8_t index = block_new_constant(parser.function->block, &val);
     block_new_opcodes(parser.function->block, OP_CONSTANT, index);
-    return val;
   } else if (type == TOKEN_NULL) {
     Value val = value_new_null();
     uint8_t index = block_new_constant(parser.function->block, &val);
     block_new_opcodes(parser.function->block, OP_CONSTANT, index);
-    return val;
   } else if (type == TOKEN_TRUE) {
     Value val = value_new_boolean(true);
     uint8_t index = block_new_constant(parser.function->block, &val);
     block_new_opcodes(parser.function->block, OP_CONSTANT, index);
-    return val;
   } else if (type == TOKEN_FALSE) {
     Value val = value_new_boolean(false);
     uint8_t index = block_new_constant(parser.function->block, &val);
     block_new_opcodes(parser.function->block, OP_CONSTANT, index);
-    return val;
   } else if (type == TOKEN_IDENTIFIER) {
     return variable(canAssign);
   } else {
@@ -398,209 +288,126 @@ static Value literal(bool canAssign) {
     token_type_print(parser.previous.type);
     printf("\n");
   }
-  return value_new_null();
 }
 
 /**
  * @brief Parses grouping expressions.
  */
-static Value grouping(bool canAssign) {
-  Value val = expression(PREC_ASSIGNMENT);
+static void grouping(bool canAssign) {
+  expression(PREC_ASSIGNMENT);
   consume(TOKEN_RPAREN);
-  return val;
 }
 
 /**
  * @brief Parses a unary expression.
  */
-static Value unary(bool canAssign) {
+static void unary(bool canAssign) {
   enum TokenType prev = parser.previous.type;
-  Value val = expression(PREC_UNARY);
+
+  expression(PREC_UNARY);
+
   switch (prev) {
     case TOKEN_MINUS: {
-      if (val.type == VAL_INTEGER_32) {
-        block_new_opcode(parser.function->block, OP_NEGATE_INTEGER_32);
-      } else {
-        parse_error("Cannot negate value of type ");
-        value_print_type(&val);
-        printf("\n");
-      }
+      block_new_opcode(parser.function->block, OP_NEGATE);
       break;
     }
     case TOKEN_EXCLAMATION: {
       block_new_opcode(parser.function->block, OP_NOT);
-      bool data = !value_is_truthy(&val);
-      val.type = VAL_BOOL;
-      val.data.boolean = data;
-      return val;
+      break;
     }
     default: {
       parse_error("Invalid unary operator\n");
       break;
     }
   }
-  return val;
 }
 
 /**
  * @brief Parses a logical expression for and.
  */
-static Value and (Value * lhs, bool canAssign) {
-  if (!type_check_single(lhs, VAL_BOOL, true))
-    return value_new_null();
+static void and (bool canAssign) {
   block_new_opcodes_3(parser.function->block, OP_CJUMPF, 0, 0);
   int start = parser.function->block->opcodes->size;
-  Value rhs = expression(PREC_AND);
-  if (!type_check_single(&rhs, VAL_BOOL, true))
-    return value_new_null();
+  expression(PREC_AND);
   int end = parser.function->block->opcodes->size;
   uint16_t dist = end - start + 1;
   (*(uint8_t*)parser.function->block->opcodes->data[start - 2]) =
       (dist >> 8) & 0xFF;
   (*(uint8_t*)parser.function->block->opcodes->data[start - 1]) = dist & 0xFF;
-  return rhs;
 }
 
 /**
  * @brief Parses a logical expression for or.
  *
- * @param lhs
  * @param canAssign
  * @return Value
  */
-static Value or (Value * lhs, bool canAssign) {
+static void or (bool canAssign) {
   block_new_opcode(parser.function->block, OP_DUPE);
   block_new_opcodes_3(parser.function->block, OP_CJUMPT, 0, 0);
   int start = parser.function->block->opcodes->size;
-  Value rhs = expression(PREC_OR);
-  if (!type_check_single(&rhs, VAL_BOOL, true))
-    return value_new_null();
+  expression(PREC_OR);
   int end = parser.function->block->opcodes->size;
   uint16_t dist = end - start + 1;
   (*(uint8_t*)parser.function->block->opcodes->data[start - 2]) =
       (dist >> 8) & 0xFF;
   (*(uint8_t*)parser.function->block->opcodes->data[start - 1]) = dist & 0xFF;
-  return rhs;
 }
-
-#define BINARY_OP_A(rhs, op, type)                                       \
-  switch ((op)) {                                                        \
-    case TOKEN_PLUS: {                                                   \
-      block_new_opcode(parser.function->block, OP_ADD_##type);           \
-      break;                                                             \
-    }                                                                    \
-    case TOKEN_MINUS: {                                                  \
-      block_new_opcode(parser.function->block, OP_SUBTRACT_##type);      \
-      break;                                                             \
-    }                                                                    \
-    case TOKEN_STAR: {                                                   \
-      block_new_opcode(parser.function->block, OP_MULTIPLY_##type);      \
-      break;                                                             \
-    }                                                                    \
-    case TOKEN_SLASH: {                                                  \
-      block_new_opcode(parser.function->block, OP_DIVIDE_##type);        \
-      break;                                                             \
-    }                                                                    \
-    case TOKEN_GREATER: {                                                \
-      block_new_opcode(parser.function->block, OP_GREATER_##type);       \
-      (*rhs) = value_new_boolean(true);                                  \
-      break;                                                             \
-    }                                                                    \
-    case TOKEN_LESS: {                                                   \
-      block_new_opcode(parser.function->block, OP_LESS_##type);          \
-      (*rhs) = value_new_boolean(true);                                  \
-      break;                                                             \
-    }                                                                    \
-    case TOKEN_GREATER_EQUAL: {                                          \
-      block_new_opcode(parser.function->block, OP_GREATER_EQUAL_##type); \
-      (*rhs) = value_new_boolean(true);                                  \
-      break;                                                             \
-    }                                                                    \
-    case TOKEN_LESS_EQUAL: {                                             \
-      block_new_opcode(parser.function->block, OP_LESS_EQUAL_##type);    \
-      (*rhs) = value_new_boolean(true);                                  \
-      break;                                                             \
-    }                                                                    \
-    case TOKEN_EQUAL_EQUAL: {                                            \
-      block_new_opcode(parser.function->block, OP_COMPARE_##type);       \
-      (*rhs) = value_new_boolean(true);                                  \
-      break;                                                             \
-    }                                                                    \
-    case TOKEN_NOT_EQUAL: {                                              \
-      block_new_opcode(parser.function->block, OP_COMPARE_##type);       \
-      block_new_opcode(parser.function->block, OP_NOT);                  \
-      (*rhs) = value_new_boolean(true);                                  \
-      break;                                                             \
-    }                                                                    \
-    default:                                                             \
-      parse_error("Invalid binary operator provided\n");                 \
-      return value_new_null();                                           \
-  }
 
 /**
  * @brief Parse rule for binary expressions.
  */
-static Value binary(Value* lhs, bool canAssign) {
+static void binary(bool canAssign) {
   enum TokenType prev = parser.previous.type;
-  Value rhs = expression((Precedence)(get_rule(prev)->precedence + 1));
 
-  switch (lhs->type) {
-    case VAL_INTEGER_32: {
-      switch (rhs.type) {
-        case VAL_INTEGER_32: {
-          BINARY_OP_A(&rhs, prev, INTEGER_32);
-          break;
-        }
-        case VAL_FLOATING_32: {
-          block_new_opcodes_3(parser.function->block, OP_SWAP, OP_I32_TO_F32,
-                              OP_SWAP);
-          BINARY_OP_A(&rhs, prev, FLOATING_32);
-          break;
-        }
-        default: {
-          parse_error("Cannot perform binary operation on type ");
-          value_print_type(lhs);
-          printf(" and ");
-          value_print_type(&rhs);
-          printf("\n");
-          return value_new_null();
-        }
-      }
+  expression((Precedence)(get_rule(prev)->precedence + 1));
+
+  switch (prev) {
+    case TOKEN_PLUS: {
+      block_new_opcode(parser.function->block, OP_ADD);
       break;
     }
-    case VAL_FLOATING_32: {
-      switch (rhs.type) {
-        case VAL_FLOATING_32: {
-          BINARY_OP_A(&rhs, prev, FLOATING_32);
-          break;
-        }
-        case VAL_INTEGER_32: {
-          block_new_opcode(parser.function->block, OP_I32_TO_F32);
-          BINARY_OP_A(&rhs, prev, FLOATING_32);
-          break;
-        }
-        default: {
-          parse_error("Cannot perform binary operation on type ");
-          value_print_type(lhs);
-          printf(" and ");
-          value_print_type(&rhs);
-          printf("\n");
-          return value_new_null();
-        }
-      }
+    case TOKEN_MINUS: {
+      block_new_opcode(parser.function->block, OP_SUB);
+      break;
+    }
+    case TOKEN_STAR: {
+      block_new_opcode(parser.function->block, OP_MUL);
+      break;
+    }
+    case TOKEN_SLASH: {
+      block_new_opcode(parser.function->block, OP_DIV);
+      break;
+    }
+    case TOKEN_LESS: {
+      block_new_opcode(parser.function->block, OP_LT);
+      break;
+    }
+    case TOKEN_LESS_EQUAL: {
+      block_new_opcode(parser.function->block, OP_LTE);
+      break;
+    }
+    case TOKEN_GREATER: {
+      block_new_opcode(parser.function->block, OP_GT);
+      break;
+    }
+    case TOKEN_GREATER_EQUAL: {
+      block_new_opcode(parser.function->block, OP_GTE);
+      break;
+    }
+    case TOKEN_EQUAL_EQUAL: {
+      block_new_opcode(parser.function->block, OP_EQ);
+      break;
+    }
+    case TOKEN_NOT_EQUAL: {
+      block_new_opcode(parser.function->block, OP_NEQ);
       break;
     }
     default: {
-      parse_error("Cannot perform binary operation on type ");
-      value_print_type(lhs);
-      printf(" and ");
-      value_print_type(&rhs);
-      printf("\n");
-      return value_new_null();
+      parse_error("Invalid binary operator\n");
+      break;
     }
   }
-
-  return rhs;
 }
 
 /**
@@ -610,144 +417,30 @@ static Value binary(Value* lhs, bool canAssign) {
  * @param fun the function to call
  * @return Value the result of the function call
  */
-static Value call_function(Value* fun) {
-  PFunction* func = TO_FUNCTION(*fun);
+static void call(bool canAssign) {
   size_t argc = 0;
   while (!check(TOKEN_RPAREN)) {
     if (argc > 0) {
       consume(TOKEN_COMMA);
     }
-    Value arg = expression(PREC_ASSIGNMENT);
-    if (!type_check(&arg, &func->parameters[argc], true))
-      return value_new_null();
+    expression(PREC_ASSIGNMENT);
     argc++;
-  }
-  if (argc != func->arity) {
-    parse_error("Function '");
-    p_object_print((PObject*)func);
-    printf("' expects %lld arguments but got %lld\n", func->arity, argc);
-    return value_new_null();
   }
   if (argc > 255) {
     parse_error("Cannot call function with more than 255 arguments\n");
-    return value_new_null();
+    return;
   }
   consume(TOKEN_RPAREN);
   block_new_opcodes(parser.function->block, OP_CALL, argc);
 
-  return func->returnType;
-}
-
-static Value call_struct(Value* lhs) {
-  PStruct* template = TO_STRUCT(*lhs);
-
-  Value* fieldArray = malloc(sizeof(Value) * template->fields.count);
-
-  for (int i = 0; i < template->fields.capacity; i++) {
-    Entry* entry = &template->fields.entries[i];
-    if (entry == NULL || entry->value == NULL)
-      continue;
-    fieldArray[entry->value->data.integer_32] = *entry->value;
-  }
-
-  size_t fields = 0;
-  while (!check(TOKEN_RPAREN)) {
-    if (fields > 0) {
-      consume(TOKEN_COMMA);
-    }
-
-    Value val = expression(PREC_ASSIGNMENT);
-
-    if (!type_check(&val, &fieldArray[fields], true)) {
-      return value_new_null();
-    }
-
-    fieldArray[fields++] = val;
-  }
-
-  if (fields != template->fields.count) {
-    parse_error("Struct '");
-    p_object_print((PObject*)template);
-    printf("' expects %d fields but got %lld\n", template->fields.count,
-           fields);
-    return value_new_null();
-  }
-
-  consume(TOKEN_RPAREN);
-
-  block_new_opcodes(parser.function->block, OP_CALL, fields);
-
-  free(fieldArray);
-
-  return value_new_object(p_object_struct_instance_new(template));
-}
-
-/**
- * @brief Descent case for function calls. Handled as an infix operator.
- */
-static Value call(Value* lhs, bool canAssign) {
-  if (!type_check_single(lhs, VAL_OBJ, true))
-    return value_new_null();
-  PObject* obj = lhs->data.reference;
-  switch (obj->type) {
-    case P_OBJ_FUNCTION:
-      return call_function(lhs);
-    case P_OBJ_STRUCT:
-      return call_struct(lhs);
-    default:
-      parse_error("Cannot call object of type ");
-      p_object_type_print(obj);
-      printf("\n");
-      return value_new_null();
-  }
+  return;
 }
 
 /**
  * @brief Descent for dot operator. Handles accessing fields of a struct or
  * class.
  */
-static Value dot(Value* lhs, bool canAssign) {
-  if (!type_check_single(lhs, VAL_OBJ, true))
-    return value_new_null();
-  PObject* obj = lhs->data.reference;
-  switch (obj->type) {
-    case P_OBJ_STRUCT_INSTANCE: {
-      PStructInstance* instance = TO_STRUCT_INSTANCE(*lhs);
-      consume(TOKEN_IDENTIFIER);
-      Value* fieldIndex =
-          hash_table_get_n(&instance->template->fields, parser.previous.start,
-                           parser.previous.length);
-
-      if (fieldIndex == NULL) {
-        parse_error("Struct '");
-        p_object_print((PObject*)instance->template);
-        printf("' has no field named '%.*s'\n", parser.previous.length,
-               parser.previous.start);
-        return value_new_null();
-      }
-
-      if (canAssign && match(TOKEN_EQUAL)) {
-        Value value = expression(PREC_ASSIGNMENT);
-        if (!type_check(&value, &instance->slots[fieldIndex->data.integer_32],
-                        true))
-          return value_new_null();
-        block_new_opcodes(parser.function->block, OP_STRUCT_SET,
-                          fieldIndex->data.integer_32);
-        return value;
-      } else {
-        Value field = instance->slots[fieldIndex->data.integer_32];
-        block_new_opcodes(parser.function->block, OP_STRUCT_GET,
-                          fieldIndex->data.integer_32);
-        return field;
-      }
-    }
-    default:
-      parse_error("Cannot access field of object of type ");
-      p_object_type_print(obj);
-      printf("\n");
-      return value_new_null();
-  }
-}
+static void dot(bool canAssign) {}
 
 /**
  * @brief Expression level parsing, handles operators and expressions based on
@@ -756,33 +449,31 @@ static Value dot(Value* lhs, bool canAssign) {
  * @param prec the precedence to handle
  * @return Value the result of the expression
  */
-static Value expression(Precedence prec) {
+static void expression(Precedence prec) {
   advance();
   PrefixFn prefix = get_rule(parser.previous.type)->prefix;
 
   // the first rule we hit will always be a prefix rule.
   if (prefix == NULL) {
     parse_error("Expected expression.\n");
-    return value_new_null();
+    return;
   }
 
   bool canAssign = prec <= PREC_ASSIGNMENT;
 
-  Value result = prefix(canAssign);
+  prefix(canAssign);
 
   // handle infix rules
   while (prec <= get_rule(parser.current.type)->precedence) {
     advance();
     InfixFn infix = get_rule(parser.previous.type)->infix;
-    result = infix(&result, canAssign);
+    infix(canAssign);
   }
 
   if (!canAssign && match(TOKEN_EQUAL)) {
     parse_error("Invalid assignment target.");
-    return value_new_null();
+    return;
   }
-
-  return result;
 }
 
 /**
@@ -790,9 +481,7 @@ static Value expression(Precedence prec) {
  */
 static void statement_if() {
   consume(TOKEN_LPAREN);
-  Value condition = expression(PREC_ASSIGNMENT);
-  if (!type_check_single(&condition, VAL_BOOL, true))
-    return;
+  expression(PREC_ASSIGNMENT);
   consume(TOKEN_RPAREN);
 
   block_new_opcodes_3(parser.function->block, OP_CJUMPF, 0xFF, 0xFF);
@@ -827,7 +516,8 @@ static void statement_if() {
 /**
  * @brief Parses a function.
  */
-static void statement_function(Value returnType) {
+static void statement_function() {
+  consume(TOKEN_IDENTIFIER);
   const char* name = parser.previous.start;
   size_t length = parser.previous.length;
 
@@ -835,36 +525,12 @@ static void statement_function(Value returnType) {
 
   PString* fname = p_object_string_new_n(name, length);
   Value fnameVal = value_new_object((PObject*)fname);
-  PFunction* function = p_object_function_new(fname, returnType);
+  PFunction* function = p_object_function_new(fname);
 
   parser.scope++;
   while (!match(TOKEN_RPAREN)) {
-    if (match(TOKEN_I32) || match(TOKEN_F32) || match(TOKEN_BOOL)) {
-      ValueType type = value_type_from_token_type(parser.previous.type);
-      consume(TOKEN_IDENTIFIER);
-      const char* name = parser.previous.start;
-      size_t length = parser.previous.length;
-      function->parameters[function->arity++] = (Value){.type = type};
-      new_local(&parser.previous, &function->parameters[function->arity - 1]);
-    } else {
-      // strings are custom-handled for now
-      if (match(TOKEN_STR)) {
-        consume(TOKEN_IDENTIFIER);
-        const char* name = parser.previous.start;
-        size_t length = parser.previous.length;
-        function->parameters[function->arity++] =
-            value_new_object((PObject*)p_object_string_new_n(name, length));
-        new_local(&parser.previous, &function->parameters[function->arity - 1]);
-      } else {
-        Value* type = hash_table_get_n(&parser.globals, name, length);
-        if (!type) {
-          parse_error("Expected parameter type but got '");
-          token_type_print(parser.previous.type);
-          printf("'\n");
-        }
-        function->parameters[function->arity++] = *type;
-        new_local(&parser.previous, &function->parameters[function->arity - 1]);
-      }
+    if (match(TOKEN_IDENTIFIER)) {
+      new_local(&parser.previous);
     }
     if (!check(TOKEN_RPAREN))
       consume(TOKEN_COMMA);
@@ -883,11 +549,6 @@ static void statement_function(Value returnType) {
 
   parse_function(function);
 
-  if (!type_check(&function->returnType, &returnType, false)) {
-    parse_error("Function '%s' return type does not match declaration\n",
-                fname->value);
-  }
-
   uint8_t index = block_new_constant(parser.function->block, &fnameVal);
 
   block_new_opcodes(parser.function->block, OP_CONSTANT, index);
@@ -904,28 +565,26 @@ static void statement_function(Value returnType) {
  *
  * @param type
  */
-static void statement_declaration_local(enum ValueType type) {
+static void statement_declaration_local() {
+  consume(TOKEN_IDENTIFIER);
   Token name = parser.previous;
 
   consume(TOKEN_EQUAL);
-  Value val = expression(PREC_ASSIGNMENT);
+  expression(PREC_ASSIGNMENT);
   if (get_local(&name) != -1) {
     parse_error("Variable '");
     token_print_lexeme(&name);
     printf("' already declared.\n");
   }
-  if (!type_check_single(&val, type, true)) {
-    return;
-  }
 
-  block_new_opcodes(parser.function->block, OP_LOCAL_SET,
-                    new_local(&name, &val));
+  block_new_opcodes(parser.function->block, OP_LOCAL_SET, new_local(&name));
 }
 
 /**
  * @brief Implementation of a global declaration.
  */
-static void statement_declaration_global(enum ValueType type) {
+static void statement_declaration_global() {
+  consume(TOKEN_IDENTIFIER);
   Token* name = &parser.previous;
   PString* pstr = p_object_string_new_n(name->start, name->length);
   Value vname = value_new_object((PObject*)pstr);
@@ -936,13 +595,9 @@ static void statement_declaration_global(enum ValueType type) {
 
   consume(TOKEN_EQUAL);
 
-  Value val = expression(PREC_ASSIGNMENT);
+  expression(PREC_ASSIGNMENT);
 
-  if (!type_check_single(&val, type, true)) {
-    return;
-  }
-
-  hash_table_set(&parser.globals, pstr->value, &val);
+  hash_table_set(&parser.globals, pstr->value, &value_new_boolean(false));
 
   block_new_opcodes(parser.function->block, OP_CONSTANT, index);
   block_new_opcode(parser.function->block, OP_GLOBAL_SET);
@@ -952,23 +607,10 @@ static void statement_declaration_global(enum ValueType type) {
  * @brief Parses a declaration.
  */
 static void statement_declaration() {
-  enum ValueType type = value_type_from_token_type(parser.previous.type);
-
-  consume(TOKEN_IDENTIFIER);
-
-  if (check(TOKEN_LPAREN)) {
-    if (type == VAL_OBJ)
-      statement_function((Value){
-          .type = type, .data.reference = &(PObject){.type = P_OBJ_STRING}});
-    else
-      statement_function((Value){.type = type});
-    return;
-  }
-
   if (parser.scope)
-    statement_declaration_local(type);
+    statement_declaration_local();
   else
-    statement_declaration_global(type);
+    statement_declaration_global();
 }
 
 /**
@@ -977,9 +619,7 @@ static void statement_declaration() {
 static void statement_while() {
   consume(TOKEN_LPAREN);
   int start = parser.function->block->opcodes->size;
-  Value condition = expression(PREC_ASSIGNMENT);
-  if (!type_check_single(&condition, VAL_BOOL, true))
-    return;
+  expression(PREC_ASSIGNMENT);
   consume(TOKEN_RPAREN);
   // check the conditional, if it's false, jump to after the loop
   block_new_opcodes_3(parser.function->block, OP_CJUMPF, 0xFF, 0xFF);
@@ -1016,8 +656,7 @@ static void statement_for() {
   // initializer
   if (match(TOKEN_SEMICOLON)) {
     // no initializer
-  } else if (match(TOKEN_I32) || match(TOKEN_F32) || match(TOKEN_BOOL) ||
-             match(TOKEN_STR)) {
+  } else if (match(TOKEN_VAR)) {
     statement_declaration();
     if (parser.previous.type != TOKEN_SEMICOLON)
       consume(TOKEN_SEMICOLON);
@@ -1033,7 +672,7 @@ static void statement_for() {
   if (match(TOKEN_SEMICOLON)) {
     // no conditional
   } else {
-    condition = expression(PREC_ASSIGNMENT);
+    expression(PREC_ASSIGNMENT);
     if (condition.type != VAL_BOOL) {
       parse_error("Expected value type VAL_BOOL but got ");
       value_print_type(&condition);
@@ -1104,59 +743,6 @@ static void statement_for() {
 }
 
 /**
- * @brief Recursive descent case for a struct declaration.
- *
- */
-static void statement_struct() {
-  bool local = parser.scope > 0;
-
-  consume(TOKEN_IDENTIFIER);
-  Token identifier = parser.previous;
-  consume(TOKEN_LBRACE);
-  PString* name = p_object_string_new_n(identifier.start, identifier.length);
-  if (!local) {
-    block_new_opcodes(
-        parser.function->block, OP_CONSTANT,
-        block_new_constant(parser.function->block, &value_new_object(name)));
-    block_new_opcode(parser.function->block, OP_GLOBAL_DEFINE);
-  }
-  PStruct* pstruct = p_object_struct_new(name);
-  size_t index = 0;
-  while (!match(TOKEN_RBRACE)) {
-    short type = parameter_type();
-    if (type == -1) {
-      parse_error("Expected type but got ");
-      token_type_print(parser.current.type);
-      printf("\n");
-      return;
-    }
-    consume(TOKEN_IDENTIFIER);
-    Token identifier = parser.previous;
-    consume(TOKEN_SEMICOLON);
-
-    PString* name = p_object_string_new_n(identifier.start, identifier.length);
-    Value iValue = (Value){.type = type, .data.integer_32 = index++};
-    hash_table_set(&pstruct->fields, name->value, &iValue);
-  }
-
-  Value nameValue = value_new_object(name);
-  Value structValue = value_new_object(pstruct);
-
-  block_new_opcodes(parser.function->block, OP_CONSTANT,
-                    block_new_constant(parser.function->block, &structValue));
-
-  if (local) {
-    int index = new_local(&identifier, &structValue);
-    block_new_opcodes(parser.function->block, OP_LOCAL_SET, index);
-  } else {
-    block_new_opcodes(parser.function->block, OP_CONSTANT,
-                      block_new_constant(parser.function->block, &nameValue));
-    block_new_opcode(parser.function->block, OP_GLOBAL_SET);
-    hash_table_set(&parser.globals, name->value, &structValue);
-  }
-}
-
-/**
  * @brief Parses a block.
  */
 static void statement_block() {
@@ -1177,24 +763,20 @@ void statement() {
     block_new_opcode(parser.function->block, OP_PRINT);
   } else if (match(TOKEN_IF)) {
     statement_if();
-  } else if (parameter_type() >= 0) {
+  } else if (match(TOKEN_VAR)) {
     statement_declaration();
+  } else if (match(TOKEN_FUN)) {
+    statement_function();
   } else if (match(TOKEN_WHILE)) {
     statement_while();
   } else if (match(TOKEN_FOR)) {
     statement_for();
   } else if (match(TOKEN_RETURN)) {
-    Value res = expression(PREC_ASSIGNMENT);
-    if (!type_check(&res, &parser.function->returnType, true))
-      return;
+    expression(PREC_ASSIGNMENT);
     block_new_opcode(parser.function->block, OP_RETURN);
   } else if (match(TOKEN_EXIT)) {
-    Value res = expression(PREC_ASSIGNMENT);
-    if (!type_check_single(&res, VAL_INTEGER_32, true))
-      return;
+    expression(PREC_ASSIGNMENT);
     block_new_opcode(parser.function->block, OP_EXIT);
-  } else if (match(TOKEN_STRUCT)) {
-    statement_struct();
   } else if (match(TOKEN_LBRACE)) {
     statement_block();
   } else {
@@ -1213,8 +795,7 @@ void statement() {
  * @return char* the name of the function.
  */
 PFunction* parse_script(char* name) {
-  parser.function =
-      p_object_function_new(p_object_string_new(name), value_new_null());
+  parser.function = p_object_function_new(p_object_string_new(name));
 
   while (!match(TOKEN_EOF)) {
     statement();
@@ -1291,17 +872,15 @@ ParseRule rules[] = {
     [TOKEN_BOOL] = {NULL, NULL, PREC_NONE},
     [TOKEN_ELSE] = {NULL, NULL, PREC_NONE},
     [TOKEN_EXIT] = {NULL, NULL, PREC_NONE},
-    [TOKEN_F32] = {NULL, NULL, PREC_NONE},
     [TOKEN_FALSE] = {literal, NULL, PREC_NONE},
     [TOKEN_FOR] = {NULL, NULL, PREC_NONE},
-    [TOKEN_I32] = {NULL, NULL, PREC_NONE},
+    [TOKEN_FUN] = {NULL, NULL, PREC_NONE},
     [TOKEN_IF] = {NULL, NULL, PREC_NONE},
     [TOKEN_NULL] = {literal, NULL, PREC_NONE},
     [TOKEN_PRINT] = {NULL, NULL, PREC_NONE},
     [TOKEN_RETURN] = {NULL, NULL, PREC_NONE},
-    [TOKEN_STR] = {NULL, NULL, PREC_NONE},
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
-    [TOKEN_VOID] = {NULL, NULL, PREC_NONE},
+    [TOKEN_VAR] = {NULL, NULL, PREC_NONE},
     [TOKEN_WHILE] = {NULL, NULL, PREC_NONE},
 
     [TOKEN_IDENTIFIER] = {variable, NULL, PREC_NONE},

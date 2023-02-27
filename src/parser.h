@@ -31,8 +31,8 @@ typedef enum Precedence {
   PREC_PRIMARY
 } Precedence;
 
-typedef Value (*PrefixFn)(bool can_assign);
-typedef Value (*InfixFn)(Value* lhs, bool can_assign);
+typedef void (*PrefixFn)(bool can_assign);
+typedef void (*InfixFn)(bool can_assign);
 
 typedef struct ParseRule {
     PrefixFn prefix;
@@ -43,7 +43,6 @@ typedef struct ParseRule {
 typedef struct Local {
   Token name;
   size_t depth;
-  Value value;
 } Local;
 
 typedef struct Parser {

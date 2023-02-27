@@ -1,5 +1,5 @@
 
-i32 factorial(i32 n) {
+fun factorial(n) {
     if (n == 0) {
         ret 1
     } else {

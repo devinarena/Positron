@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "object.h"
 #include "value.h"
@@ -29,8 +30,8 @@ bool value_is_truthy(Value* value) {
       return false;
     case VAL_BOOL:
       return value->data.boolean;
-    case VAL_INTEGER_32:
-      return value->data.integer_32 != 0;
+    case VAL_NUMBER:
+      return fabs(value->data.number) > 0.00001f;
     case VAL_OBJ:
       return value->data.reference != NULL;
     default:
@@ -66,20 +67,16 @@ Value* value_clone(Value* value) {
  */
 enum ValueType value_type_from_token_type(enum TokenType type) {
   switch (type) {
-    case TOKEN_VOID:
     case TOKEN_NULL:
       return VAL_NULL;
     case TOKEN_TRUE:
     case TOKEN_FALSE:
     case TOKEN_BOOL:
       return VAL_BOOL;
-    case TOKEN_I32:
     case TOKEN_LITERAL_INTEGER:
-      return VAL_INTEGER_32;
-    case TOKEN_F32:
+      return VAL_NUMBER;
     case TOKEN_LITERAL_FLOATING:
-      return VAL_FLOATING_32;
-    case TOKEN_STR:
+      return VAL_NUMBER;
     case TOKEN_LITERAL_STRING:
     case TOKEN_IDENTIFIER:
       return VAL_OBJ;
@@ -101,11 +98,8 @@ void value_print(Value* value) {
     case VAL_BOOL:
       printf("%s", value->data.boolean ? "true" : "false");
       break;
-    case VAL_INTEGER_32:
-      printf("%d", value->data.integer_32);
-      break;
-    case VAL_FLOATING_32:
-      printf("%f", value->data.floating_32);
+    case VAL_NUMBER:
+      printf("%f", value->data.number);
       break;
     case VAL_OBJ:
       p_object_print(value->data.reference);
@@ -145,10 +139,7 @@ void value_type_print_type(enum ValueType type) {
     case VAL_BOOL:
       printf("bool");
       break;
-    case VAL_INTEGER_32:
-      printf("i32");
-      break;
-    case VAL_FLOATING_32:
+    case VAL_NUMBER:
       printf("f32");
       break;
     case VAL_OBJ:

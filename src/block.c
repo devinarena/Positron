@@ -159,88 +159,41 @@ size_t block_print_opcode(Block* block, size_t index) {
     case OP_GLOBAL_GET:
       printf("OP_GLOBAL_GET");
       return 1;
-    case OP_NEGATE_INTEGER_32:
-      printf("OP_NEGATE_INTEGER_32");
-      return 1;
-    case OP_ADD_INTEGER_32:
-      printf("OP_ADD_INTEGER_32");
-      return 1;
-    case OP_SUBTRACT_INTEGER_32:
-      printf("OP_SUBTRACT_INTEGER_32");
-      return 1;
-    case OP_MULTIPLY_INTEGER_32:
-      printf("OP_MULTIPLY_INTEGER_32");
-      return 1;
-    case OP_DIVIDE_INTEGER_32:
-      printf("OP_DIVIDE_INTEGER_32");
-      return 1;
-    case OP_COMPARE_INTEGER_32:
-      printf("OP_COMPARE_INTEGER_32");
-      return 1;
-    case OP_GREATER_INTEGER_32: {
-      printf("OP_GREATER_INTEGER_32");
-      return 1;
-    }
-    case OP_LESS_INTEGER_32: {
-      printf("OP_LESS_INTEGER_32");
-      return 1;
-    }
-    case OP_GREATER_EQUAL_INTEGER_32: {
-      printf("OP_GREATER_EQUAL_INTEGER_32");
-      return 1;
-    }
-    case OP_LESS_EQUAL_INTEGER_32: {
-      printf("OP_LESS_EQUAL_INTEGER_32");
-      return 1;
-    }
-    case OP_I32_TO_F32: {
-      printf("OP_I32_TO_F32");
-      return 1;
-    }
-    case OP_NEGATE_FLOATING_32: {
-      printf("OP_NEGATE_FLOATING_32");
-      return 1;
-    }
-    case OP_ADD_FLOATING_32: {
-      printf("OP_ADD_FLOATING_32");
-      return 1;
-    }
-    case OP_SUBTRACT_FLOATING_32: {
-      printf("OP_SUBTRACT_FLOATING_32");
-      return 1;
-    }
-    case OP_MULTIPLY_FLOATING_32: {
-      printf("OP_MULTIPLY_FLOATING_32");
-      return 1;
-    }
-    case OP_DIVIDE_FLOATING_32:
-      printf("OP_DIVIDE_FLOATING_32");
-      return 1;
-    case OP_COMPARE_FLOATING_32:
-      printf("OP_COMPARE_FLOATING_32");
-      return 1;
-    case OP_GREATER_FLOATING_32: {
-      printf("OP_GREATER_FLOATING_32");
-      return 1;
-    }
-    case OP_LESS_FLOATING_32: {
-      printf("OP_LESS_FLOATING_32");
-      return 1;
-    }
-    case OP_GREATER_EQUAL_FLOATING_32: {
-      printf("OP_GREATER_EQUAL_FLOATING_32");
-      return 1;
-    }
-    case OP_LESS_EQUAL_FLOATING_32: {
-      printf("OP_LESS_EQUAL_FLOATING_32");
-      return 1;
-    }
-    case OP_COMPARE_BOOLEAN: {
-      printf("OP_COMPARE_BOOLEAN");
-      return 1;
-    }
     case OP_NOT:
       printf("OP_NOT");
+      return 1;
+    case OP_NEGATE:
+      printf("OP_NEGATE");
+      return 1;
+    case OP_ADD: 
+      printf("OP_ADD");
+      return 1;
+    case OP_SUB:
+      printf("OP_SUB");
+      return 1;
+    case OP_MUL:
+      printf("OP_MUL");
+      return 1;
+    case OP_DIV:
+      printf("OP_DIV");
+      return 1;
+    case OP_LT:
+      printf("OP_LT");
+      return 1;
+    case OP_GT:
+      printf("OP_GT");
+      return 1;
+    case OP_LTE:
+      printf("OP_LTE");
+      return 1;
+    case OP_GTE:
+      printf("OP_GTE");
+      return 1;
+    case OP_EQ:
+      printf("OP_EQ");
+      return 1;
+    case OP_NEQ:
+      printf("OP_NEQ");
       return 1;
     case OP_CONSTANT:
       printf("OP_CONSTANT [%d]", *(uint8_t*)block->opcodes->data[index + 1]);

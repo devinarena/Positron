@@ -1,5 +1,5 @@
 
-i32 a = 1000
+var a = 1000
 
 while (a >= 1) {
     print a

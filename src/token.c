@@ -82,17 +82,11 @@ void token_type_print(enum TokenType type) {
     case TOKEN_EXIT:
       printf("TOKEN_EXIT");
       break;
-    case TOKEN_F32:
-      printf("TOKEN_F32");
-      break;
     case TOKEN_FALSE:
       printf("TOKEN_FALSE");
       break;
     case TOKEN_FOR:
       printf("TOKEN_FOR");
-      break;
-    case TOKEN_I32:
-      printf("TOKEN_I32");
       break;
     case TOKEN_IF:
       printf("TOKEN_IF");
@@ -106,17 +100,8 @@ void token_type_print(enum TokenType type) {
     case TOKEN_RETURN:
       printf("TOKEN_RETURN");
       break;
-    case TOKEN_STR:
-      printf("TOKEN_STR");
-      break;
-    case TOKEN_STRUCT:
-      printf("TOKEN_STRUCT");
-      break;
     case TOKEN_TRUE:
       printf("TOKEN_TRUE");
-      break;
-    case TOKEN_VOID:
-      printf("TOKEN_VOID");
       break;
     case TOKEN_WHILE:
       printf("TOKEN_WHILE");
@@ -174,6 +159,12 @@ void token_type_print(enum TokenType type) {
       break;
     case TOKEN_EQUAL_EQUAL:
       printf("TOKEN_EQUAL_EQUAL");
+      break;
+    case TOKEN_FUN: 
+      printf("TOKEN_FUN");
+      break;
+    case TOKEN_VAR:
+      printf("TOKEN_VAR");
       break;
     case TOKEN_NOT_EQUAL:
       printf("TOKEN_NOT_EQUAL");

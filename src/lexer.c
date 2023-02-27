@@ -78,7 +78,7 @@ static Token make_token(enum TokenType type, const char* start, size_t length) {
  * @return Token* the token representing the number (floating point or integer)
  */
 static Token number() {
-  enum TokenType type = TOKEN_LITERAL_INTEGER;
+  enum TokenType type = TOKEN_LITERAL_FLOATING;
   const char* schar = lexer.input + lexer.index;
   int start = lexer.index;
   while (isdigit(peek()))
@@ -114,14 +114,12 @@ static Token identifier() {
     return make_token(TOKEN_EXIT, schar, length);
   } else if (length == 4 && strncmp(schar, "else", length) == 0) {
     return make_token(TOKEN_ELSE, schar, length);
-  } else if (length == 3 && strncmp(schar, "f32", length) == 0) {
-    return make_token(TOKEN_F32, schar, length);
   } else if (length == 5 && strncmp(schar, "false", length) == 0) {
     return make_token(TOKEN_FALSE, schar, length);
   } else if (length == 3 && strncmp(schar, "for", length) == 0) {
     return make_token(TOKEN_FOR, schar, length);
-  } else if (length == 3 && strncmp(schar, "i32", length) == 0) {
-    return make_token(TOKEN_I32, schar, length);
+  } else if (length == 3 && strncmp(schar, "fun", length) == 0) {
+    return make_token(TOKEN_FUN, schar, length);
   } else if (length == 2 && strncmp(schar, "if", length) == 0) {
     return make_token(TOKEN_IF, schar, length);
   } else if (length == 4 && strncmp(schar, "null", length) == 0) {
@@ -130,14 +128,10 @@ static Token identifier() {
     return make_token(TOKEN_RETURN, schar, length);
   } else if (length == 5 && strncmp(schar, "print", length) == 0) {
     return make_token(TOKEN_PRINT, schar, length);
-  } else if (length == 3 && strncmp(schar, "str", length) == 0) {
-    return make_token(TOKEN_STR, schar, length);
-  } else if (length == 6 && strncmp(schar, "struct", length) == 0) {
-    return make_token(TOKEN_STRUCT, schar, length);
   } else if (length == 4 && strncmp(schar, "true", length) == 0) {
     return make_token(TOKEN_TRUE, schar, length);
-  } else if (length == 2 && strncmp(schar, "vd", length) == 0) {
-    return make_token(TOKEN_VOID, schar, length);
+  } else if (length == 3 && strncmp(schar, "var", length) == 0) {
+    return make_token(TOKEN_VAR, schar, length);
   } else if (length == 5 && strncmp(schar, "while", length) == 0) {
     return make_token(TOKEN_WHILE, schar, length);
   }

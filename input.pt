@@ -1,9 +1,3 @@
 
 
-struct Person {
-    str name;
-}
-
-Person devin = Person(Person)
-
-print devin.name
+print -2

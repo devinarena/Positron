@@ -87,22 +87,10 @@ static void call_object(CallFrame** frame, Value obj, size_t arg_count) {
   switch (object->type) {
     case P_OBJ_FUNCTION: {
       (*frame)->ip += 2;
-      push_frame(
-          (CallFrame){.ip = 0, .function = (PFunction*)object});
+      push_frame((CallFrame){.ip = 0, .function = (PFunction*)object});
       (*frame) = &interpreter.frames[interpreter.fp - 1];
       (*frame)->slots = &interpreter.stack[interpreter.sp - arg_count];
       (*frame)->slotCount = arg_count;
-      break;
-    }
-    case P_OBJ_STRUCT: {
-      (*frame)->ip += 2;
-      PStructInstance* instance = p_object_struct_instance_new((PStruct*)object);
-      for (size_t i = 0; i < arg_count; i++) {
-        Value value = pop_stack();
-        instance->slots[i] = value;
-      }
-      pop_stack(); // pop the struct template
-      push_stack(value_new_object((PObject*)instance));
       break;
     }
     default: {
@@ -110,6 +98,126 @@ static void call_object(CallFrame** frame, Value obj, size_t arg_count) {
       exit(1);
     }
   }
+}
+
+/**
+ * OPCODE FUNCTIONS
+ */
+static int negate() {
+  Value a = pop_stack();
+  switch (a.type) {
+    case VAL_NUMBER:
+      push_stack(value_new_number(-a.data.number));
+      break;
+    default:
+      printf("Expected numeric value to negate.");
+      exit(1);
+  }
+  return 1;
+}
+
+static int binary(enum TokenType op) {
+  Value b = pop_stack();
+  Value a = pop_stack();
+  switch (op) {
+    case TOKEN_PLUS: {
+      if (a.type == VAL_NUMBER && b.type == VAL_NUMBER) {
+        push_stack(value_new_number(a.data.number + b.data.number));
+      } else {
+        printf("Undefined operation for given values.");
+        exit(1);
+      }
+      break;
+    }
+    case TOKEN_MINUS: {
+      if (a.type == VAL_NUMBER && b.type == VAL_NUMBER) {
+        push_stack(value_new_number(a.data.number - b.data.number));
+      } else {
+        printf("Undefined operation for given values.");
+        exit(1);
+      }
+      break;
+    }
+    case TOKEN_STAR: {
+      if (a.type == VAL_NUMBER && b.type == VAL_NUMBER) {
+        push_stack(value_new_number(a.data.number * b.data.number));
+      } else {
+        printf("Undefined operation for given values.");
+        exit(1);
+      }
+      break;
+    }
+    case TOKEN_SLASH: {
+      if (a.type == VAL_NUMBER && b.type == VAL_NUMBER) {
+        if (b.data.number == 0) {
+          printf("Division by zero.");
+          exit(1);
+        }
+        push_stack(value_new_number(a.data.number / b.data.number));
+      } else {
+        printf("Undefined operation for given values.");
+        exit(1);
+      }
+      break;
+    }
+    case TOKEN_LESS: {
+      if (a.type == VAL_NUMBER && b.type == VAL_NUMBER) {
+        push_stack(value_new_boolean(a.data.number < b.data.number));
+      } else {
+        printf("Undefined operation for given values.");
+        exit(1);
+      }
+      break;
+    }
+    case TOKEN_LESS_EQUAL: {
+      if (a.type == VAL_NUMBER && b.type == VAL_NUMBER) {
+        push_stack(value_new_boolean(a.data.number <= b.data.number));
+      } else {
+        printf("Undefined operation for given values.");
+        exit(1);
+      }
+      break;
+    }
+    case TOKEN_GREATER: {
+      if (a.type == VAL_NUMBER && b.type == VAL_NUMBER) {
+        push_stack(value_new_boolean(a.data.number > b.data.number));
+      } else {
+        printf("Undefined operation for given values.");
+        exit(1);
+      }
+      break;
+    }
+    case TOKEN_GREATER_EQUAL: {
+      if (a.type == VAL_NUMBER && b.type == VAL_NUMBER) {
+        push_stack(value_new_boolean(a.data.number >= b.data.number));
+      } else {
+        printf("Undefined operation for given values.");
+        exit(1);
+      }
+      break;
+    }
+    case TOKEN_EQUAL_EQUAL: {
+      if (a.type == VAL_NUMBER && b.type == VAL_NUMBER) {
+        push_stack(value_new_boolean(a.data.number == b.data.number));
+      } else {
+        push_stack(value_new_boolean(false));
+      }
+      break;
+    }
+    case TOKEN_NOT_EQUAL: {
+      if (a.type == VAL_NUMBER && b.type == VAL_NUMBER) {
+        push_stack(value_new_boolean(a.data.number != b.data.number));
+      } else {
+        push_stack(value_new_boolean(true));
+      }
+      break;
+    }
+    default: {
+      printf("Undefined binary operator.");
+      exit(1);
+    }
+  }
+  return 1;
 }
 
 /**
@@ -157,7 +265,7 @@ InterpretResult interpret(PFunction* function) {
       }
       case OP_EXIT: {
         Value res = pop_stack();
-        return (InterpretResult)res.data.integer_32;
+        return (InterpretResult)res.data.number;
       }
       case OP_CALL: {
         uint8_t arg_count =
@@ -172,7 +280,10 @@ InterpretResult interpret(PFunction* function) {
       }
       case OP_RETURN: {
         Value res = value_new_null();
-        if (frame->function->returnType.type != VAL_NULL) {
+        // TODO: look at this potentially
+        if (interpreter.stack + interpreter.sp - frame->slots -
+                frame->slotCount >
+            0) {
           res = pop_stack();
         }
         pop_frame();
@@ -193,167 +304,6 @@ InterpretResult interpret(PFunction* function) {
         frame->ip++;
         break;
       }
-      case OP_NEGATE_INTEGER_32: {
-        Value v = pop_stack();
-        push_stack(value_new_int_32(-v.data.integer_32));
-        frame->ip++;
-        break;
-      }
-      case OP_ADD_INTEGER_32: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(value_new_int_32(v1.data.integer_32 + v2.data.integer_32));
-        frame->ip++;
-        break;
-      }
-      case OP_SUBTRACT_INTEGER_32: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(value_new_int_32(v1.data.integer_32 - v2.data.integer_32));
-        frame->ip++;
-        break;
-      }
-      case OP_MULTIPLY_INTEGER_32: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(value_new_int_32(v1.data.integer_32 * v2.data.integer_32));
-        frame->ip++;
-        break;
-      }
-      case OP_DIVIDE_INTEGER_32: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(value_new_int_32(v1.data.integer_32 / v2.data.integer_32));
-        push_stack(v1);
-        frame->ip++;
-        break;
-      }
-      case OP_COMPARE_INTEGER_32: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(value_new_boolean(v1.data.integer_32 == v2.data.integer_32));
-        frame->ip++;
-        break;
-      }
-      case OP_GREATER_INTEGER_32: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(value_new_boolean(v1.data.integer_32 > v2.data.integer_32));
-        frame->ip++;
-        break;
-      }
-      case OP_LESS_INTEGER_32: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(value_new_boolean(v1.data.integer_32 < v2.data.integer_32));
-        frame->ip++;
-        break;
-      }
-      case OP_GREATER_EQUAL_INTEGER_32: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(value_new_boolean(v1.data.integer_32 >= v2.data.integer_32));
-        frame->ip++;
-        break;
-      }
-      case OP_LESS_EQUAL_INTEGER_32: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(value_new_boolean(v1.data.integer_32 <= v2.data.integer_32));
-        frame->ip++;
-        break;
-      }
-      case OP_I32_TO_F32: {
-        Value v = pop_stack();
-        push_stack(value_new_float_32((float)v.data.integer_32));
-        frame->ip++;
-        break;
-      }
-      case OP_NEGATE_FLOATING_32: {
-        Value v = pop_stack();
-        push_stack(value_new_float_32(-v.data.floating_32));
-        frame->ip++;
-        break;
-      }
-      case OP_ADD_FLOATING_32: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(
-            value_new_float_32(v1.data.floating_32 + v2.data.floating_32));
-        frame->ip++;
-        break;
-      }
-      case OP_SUBTRACT_FLOATING_32: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(
-            value_new_float_32(v1.data.floating_32 - v2.data.floating_32));
-        frame->ip++;
-        break;
-      }
-      case OP_MULTIPLY_FLOATING_32: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(
-            value_new_float_32(v1.data.floating_32 * v2.data.floating_32));
-        frame->ip++;
-        break;
-      }
-      case OP_DIVIDE_FLOATING_32: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(
-            value_new_float_32(v1.data.floating_32 / v2.data.floating_32));
-        frame->ip++;
-        break;
-      }
-      case OP_COMPARE_FLOATING_32: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(
-            value_new_boolean(v1.data.floating_32 == v2.data.floating_32));
-        frame->ip++;
-        break;
-      }
-      case OP_GREATER_FLOATING_32: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(
-            value_new_boolean(v1.data.floating_32 > v2.data.floating_32));
-        frame->ip++;
-        break;
-      }
-      case OP_LESS_FLOATING_32: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(
-            value_new_boolean(v1.data.floating_32 < v2.data.floating_32));
-        frame->ip++;
-        break;
-      }
-      case OP_GREATER_EQUAL_FLOATING_32: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(
-            value_new_boolean(v1.data.floating_32 >= v2.data.floating_32));
-        frame->ip++;
-        break;
-      }
-      case OP_LESS_EQUAL_FLOATING_32: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(
-            value_new_boolean(v1.data.floating_32 <= v2.data.floating_32));
-        frame->ip++;
-        break;
-      }
-      case OP_COMPARE_BOOLEAN: {
-        Value v2 = pop_stack();
-        Value v1 = pop_stack();
-        push_stack(value_new_boolean(v1.data.boolean == v2.data.boolean));
-        frame->ip++;
-        break;
-      }
       case OP_NOT: {
         Value v = pop_stack();
         bool data = !value_is_truthy(&v);
@@ -363,6 +313,10 @@ InterpretResult interpret(PFunction* function) {
         frame->ip++;
         break;
       }
+      case OP_NEGATE: {
+        frame->ip += negate();
+        break;
+      }
       case OP_CONSTANT: {
         uint8_t index =
             *(uint8_t*)frame->function->block->opcodes->data[++frame->ip];
@@ -370,6 +324,46 @@ InterpretResult interpret(PFunction* function) {
             *(Value*)frame->function->block->constants->data[index];
         push_stack(constant);
         frame->ip++;
+        break;
+      }
+      case OP_ADD: {
+        frame->ip += binary(TOKEN_PLUS);
+        break;
+      }
+      case OP_SUB: {
+        frame->ip += binary(TOKEN_MINUS);
+        break;
+      }
+      case OP_MUL: {
+        frame->ip += binary(TOKEN_STAR);
+        break;
+      }
+      case OP_DIV: {
+        frame->ip += binary(TOKEN_SLASH);
+        break;
+      }
+      case OP_LT: {
+        frame->ip += binary(TOKEN_LESS);
+        break;
+      }
+      case OP_GT: {
+        frame->ip += binary(TOKEN_GREATER);
+        break;
+      }
+      case OP_LTE: {
+        frame->ip += binary(TOKEN_LESS_EQUAL);
+        break;
+      }
+      case OP_GTE: {
+        frame->ip += binary(TOKEN_GREATER_EQUAL);
+        break;
+      }
+      case OP_EQ: {
+        frame->ip += binary(TOKEN_EQUAL_EQUAL);
+        break;
+      }
+      case OP_NEQ: {
+        frame->ip += binary(TOKEN_NOT_EQUAL);
         break;
       }
       case OP_GLOBAL_DEFINE: {
@@ -407,23 +401,6 @@ InterpretResult interpret(PFunction* function) {
         frame->slots[index] = peek_stack(0);
         if (interpreter.sp > (frame->slots - interpreter.stack) + index + 1)
           pop_stack();
-        frame->ip++;
-        break;
-      }
-      case OP_STRUCT_GET: {
-        uint8_t index = *(uint8_t*)frame->function->block->opcodes->data[++frame->ip];
-        Value struct_value = pop_stack();
-        PStructInstance* instance = TO_STRUCT_INSTANCE(struct_value);
-        push_stack(instance->slots[index]);
-        frame->ip++;
-        break;
-      }
-      case OP_STRUCT_SET: {
-        uint8_t index = *(uint8_t*)frame->function->block->opcodes->data[++frame->ip];
-        Value value = pop_stack();
-        Value struct_value = pop_stack();
-        PStructInstance* instance = TO_STRUCT_INSTANCE(struct_value);
-        instance->slots[index] = value;
         frame->ip++;
         break;
       }

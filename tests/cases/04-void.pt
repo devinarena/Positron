@@ -1,5 +1,5 @@
 
-vd print_nums() {
+fun print_nums() {
     print "123"
 }
 

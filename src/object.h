@@ -27,8 +27,6 @@ typedef enum PObjectType {
   P_OBJ,
   P_OBJ_STRING,
   P_OBJ_FUNCTION,
-  P_OBJ_STRUCT,
-  P_OBJ_STRUCT_INSTANCE,
 } PObjectType;
 
 struct PObject {
@@ -46,32 +44,14 @@ typedef struct PFunction {
   PObject base;
   PString* name;
   Block* block;
-  Value returnType;
   size_t arity;
-  Value parameters[255];
 } PFunction;
-
-typedef struct PStruct {
-  PObject base;
-  PString* name;
-  HashTable fields;
-} PStruct;
-
-typedef struct PStructInstance {
-  PObject base;
-  PStruct* template;
-  Value* slots;
-} PStructInstance;
 
 // allocates and returns a new PString.
 PString* p_object_string_new_n(const char* data, size_t length);
 PString* p_object_string_new(const char* data);
 // allocates and returns a new PFunction.
-PFunction* p_object_function_new(PString* name, Value returnType);
-// allocates and returns a new PStruct.
-PStruct* p_object_struct_new(PString* name);
-// allocates and returns a new PStruct
-PStructInstance* p_object_struct_instance_new(PStruct* template);
+PFunction* p_object_function_new(PString* name);
 // prints the type of the given PObject.
 void p_object_type_print(PObject* object);
 // prints the given PObject.

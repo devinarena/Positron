@@ -190,7 +190,7 @@ bool hash_table_delete(HashTable* table, const char* key) {
     value_free(entry->value);
 
   Value* copy = value_clone(&value_new_null());
-  copy->data.integer_32 = -1;
+  copy->data.number = -1;
   entry->value = copy;  // tombstone
   return true;
 }

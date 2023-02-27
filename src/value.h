@@ -18,16 +18,14 @@ typedef struct PObject PObject;
 typedef enum ValueType {
   VAL_NULL,
   VAL_BOOL,
-  VAL_INTEGER_32,
-  VAL_FLOATING_32,
+  VAL_NUMBER,
   VAL_OBJ
 } ValueType;
 
 typedef struct {
   enum ValueType type;
   union data {
-    int integer_32;
-    float floating_32;
+    double number;
     bool boolean;
     PObject* reference;
   } data;
@@ -55,23 +53,15 @@ void value_free(Value* value);
 /////////////////////////////
 
 /**
- * @brief Returns a new 32-bit integer value.
- *
- * @param data the data to store in the value
- */
-#define value_new_int_32(val) \
-  ((Value){.type = VAL_INTEGER_32, .data.integer_32 = (val)})
-
-/**
  * @brief Returns a new 32-bit floating point value.
  */
-#define value_new_float_32(val) \
-  ((Value){.type = VAL_FLOATING_32, .data.floating_32 = (val)})
+#define value_new_number(val) \
+  ((Value){.type = VAL_NUMBER, .data.number = (val)})
 
 /**
  * @brief Returns a new null value.
  */
-#define value_new_null() ((Value){.type = VAL_NULL, .data.integer_32 = 0})
+#define value_new_null() ((Value){.type = VAL_NULL, .data.number = 0})
 
 /**
  * @brief Returns a new object value.
