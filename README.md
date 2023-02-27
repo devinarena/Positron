@@ -62,5 +62,23 @@ test.a = 5
 print test.a
 ```
 
+## Future Goals
+### Please note: most if not all of these features are not yet implemented.
+The end-goal of Positron (other than the learning experience) is to create a tool for solving DSA problems in a fun way. For example:
+```
+bool contains_duplicate(i32[] nums) {
+    set<i32> seen = set()
+
+    for (i32 num : nums) {
+        if (seen.has(num)) {
+            ret true
+        }
+        seen.add(num)
+    }
+
+    ret false
+}
+```
+
 ## License and Contribute
 Published under the MIT License. Contributions and ideas are welcome.
