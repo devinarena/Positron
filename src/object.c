@@ -65,6 +65,17 @@ PFunction* p_object_function_new(PString* name) {
 }
 
 /**
+ * @brief Allocates and returns a new builtin function object.
+ * 
+ */
+PBuiltin* p_object_builtin_new(PString* name, BuiltinFn function) {
+  PBuiltin* builtin = p_object_new(PBuiltin, P_OBJ_BUILTIN);
+  builtin->name = name;
+  builtin->function = *function;
+  return builtin;
+}
+
+/**
  * @brief Outputs the objects type to stdout.
  * 
  * @param type the type of the object
@@ -91,6 +102,9 @@ void p_object_print(PObject* object) {
     case P_OBJ_FUNCTION:
       printf("<fun %s>", ((PFunction*)object)->name->value);
       break;
+    case P_OBJ_BUILTIN:
+      printf("<builtin %s>", ((PBuiltin*)object)->name->value);
+      break;
     default:
       printf("<object %p>", object);
       break;
@@ -111,6 +125,12 @@ void p_object_free(PObject* object) {
       PFunction* function = (PFunction*)object;
       p_object_free((PObject*)function->name);
       block_free(function->block);
+      break;
+    }
+    case P_OBJ_BUILTIN: {
+      PBuiltin* builtin = (PBuiltin*)object;
+      p_object_free((PObject*)builtin->name);
+      p_object_free((PObject*)builtin->name);
       break;
     }
     default:

@@ -1,4 +1,0 @@
-var x = (5 - 3) * 2 * 9
-var y = 4
-var z = x + y
-print z * x

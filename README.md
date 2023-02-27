@@ -38,28 +38,13 @@ print "Hello, world"
 ```
 Print a string 10 times:
 ```
-vd print_n(str text, i32 count) {
-  for (i32 i = 0; i < count; i = i + 1) {
+vd print_n(text, count) {
+  for (var i = 0; i < count; i = i + 1) {
     print text
   }
 }
 
 print_n("Hello, world!", 10);
-```
-Simple data structures:
-```
-// structs are the only currently supported data structure, more to come...
-struct Test {
-    i32 a;
-}
-
-Test test = Test(3)
-
-print test.a
-
-test.a = 5
-
-print test.a
 ```
 
 ## Future Goals
@@ -67,9 +52,9 @@ print test.a
 The end-goal of Positron (other than the learning experience) is to create a tool for solving DSA problems in a fun way. For example:
 ```
 bool contains_duplicate(i32[] nums) {
-    set<i32> seen = set()
+    var seen = set {}
 
-    for (i32 num : nums) {
+    for (var num : nums) {
         if (seen.has(num)) {
             ret true
         }

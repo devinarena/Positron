@@ -10,6 +10,7 @@
 
 #include "interpreter.h"
 #include "positron.h"
+#include "standard_lib.h"
 
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
@@ -23,6 +24,7 @@ void interpreter_init() {
   interpreter.sp = 0;
   interpreter.heap = NULL;
   hash_table_init(&interpreter.globals);
+  init_standard_lib(&interpreter.globals);
 }
 
 /**

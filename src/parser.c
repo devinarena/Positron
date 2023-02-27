@@ -841,7 +841,7 @@ PFunction* parse_function(PFunction* target) {
   if (parser.previous.type != TOKEN_RBRACE) {
     parse_error("Expected '}' at end of function");
   }
-
+  
   block_new_opcode(parser.function->block, OP_RETURN);
 
   if (parser.had_error) {

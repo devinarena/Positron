@@ -27,6 +27,7 @@ typedef enum PObjectType {
   P_OBJ,
   P_OBJ_STRING,
   P_OBJ_FUNCTION,
+  P_OBJ_BUILTIN
 } PObjectType;
 
 struct PObject {
@@ -47,11 +48,22 @@ typedef struct PFunction {
   size_t arity;
 } PFunction;
 
+typedef Value (*BuiltinFn)(size_t argc, Value* args);
+
+typedef struct PBuiltin {
+  PObject base;
+  PString* name;
+  size_t arity;
+  BuiltinFn function;
+} PBuiltin;
+
 // allocates and returns a new PString.
 PString* p_object_string_new_n(const char* data, size_t length);
 PString* p_object_string_new(const char* data);
 // allocates and returns a new PFunction.
 PFunction* p_object_function_new(PString* name);
+// allocates and returns a new PBuiltin.
+PBuiltin* p_object_builtin_new(PString* name, BuiltinFn function);
 // prints the type of the given PObject.
 void p_object_type_print(PObject* object);
 // prints the given PObject.
