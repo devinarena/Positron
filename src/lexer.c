@@ -128,6 +128,8 @@ static Token identifier() {
     return make_token(TOKEN_RETURN, schar, length);
   } else if (length == 5 && strncmp(schar, "print", length) == 0) {
     return make_token(TOKEN_PRINT, schar, length);
+  } else if (length == 6 && strncmp(schar, "struct", length) == 0) {
+    return make_token(TOKEN_STRUCT, schar, length);
   } else if (length == 4 && strncmp(schar, "true", length) == 0) {
     return make_token(TOKEN_TRUE, schar, length);
   } else if (length == 3 && strncmp(schar, "var", length) == 0) {

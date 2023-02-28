@@ -181,6 +181,9 @@ void token_type_print(enum TokenType type) {
     case TOKEN_OR:
       printf("TOKEN_OR");
       break;
+    case TOKEN_STRUCT:
+      printf("TOKEN_STRUCT");
+      break;
   }
 }
 

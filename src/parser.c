@@ -16,6 +16,7 @@
 #include "positron.h"
 #include "token.h"
 #include "value.h"
+#include "standard_lib.h"
 
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
@@ -141,6 +142,7 @@ static void synchronize() {
       case TOKEN_FUN:
       case TOKEN_RETURN:
       case TOKEN_SEMICOLON:
+      case TOKEN_STRUCT:
         return;
       default:
         break;
@@ -755,6 +757,34 @@ static void statement_block() {
   pop_locals();
 }
 
+static void statement_struct_template() {
+  consume(TOKEN_IDENTIFIER);
+  Token name = parser.previous;
+  PString* name_string = p_object_string_new_n(name.start, name.length);
+  consume(TOKEN_LBRACE);
+  PStructTemplate* template = p_object_struct_template_new(name_string);
+  int index = 0;
+  while (!match(TOKEN_RBRACE)) {
+    consume(TOKEN_IDENTIFIER);
+    char field[200] = {0};
+    memcpy(field, parser.previous.start, parser.previous.length);
+    hash_table_set(&template->fields, field, &value_new_number(index++));
+    consume(TOKEN_COMMA);
+  }
+  block_new_opcodes(
+      parser.function->block, OP_CONSTANT,
+      block_new_constant(parser.function->block, &value_new_object(template)));
+  if (parser.scope) {
+    block_new_opcodes(parser.function->block, OP_LOCAL_SET, new_local(&name));
+  } else {
+    hash_table_set(&parser.globals, name_string->value, &value_new_object(template));
+    block_new_opcodes(parser.function->block, OP_CONSTANT,
+                      block_new_constant(parser.function->block,
+                                         &value_new_object(name_string)));
+    block_new_opcode(parser.function->block, OP_GLOBAL_SET);
+  }
+}
+
 /**
  * @brief Parses a statement.
  */
@@ -768,6 +798,8 @@ void statement() {
     statement_declaration();
   } else if (match(TOKEN_FUN)) {
     statement_function();
+  } else if (match(TOKEN_STRUCT)) {
+    statement_struct_template();
   } else if (match(TOKEN_WHILE)) {
     statement_while();
   } else if (match(TOKEN_FOR)) {
@@ -842,7 +874,7 @@ PFunction* parse_function(PFunction* target) {
   if (parser.previous.type != TOKEN_RBRACE) {
     parse_error("Expected '}' at end of function");
   }
-  
+
   block_new_opcode(parser.function->block, OP_RETURN);
 
   if (parser.had_error) {

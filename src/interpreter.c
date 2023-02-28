@@ -6,7 +6,10 @@
  * @since 1/7/2023
  **/
 
+#include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "interpreter.h"
 #include "positron.h"
@@ -98,11 +101,40 @@ static void call_object(CallFrame** frame, Value obj, size_t arg_count) {
     case P_OBJ_BUILTIN: {
       (*frame)->ip += 2;
       PBuiltin* builtin = (PBuiltin*)object;
-      Value result = builtin->function(arg_count, &interpreter.stack[interpreter.sp - arg_count]);
+      Value result = builtin->function(
+          arg_count, &interpreter.stack[interpreter.sp - arg_count]);
       for (size_t i = 0; i < arg_count; i++) {
         pop_stack();
       }
       push_stack(result);
+      break;
+    }
+    case P_OBJ_STRUCT_TEMPLATE: {
+      (*frame)->ip += 2;
+      PStructTemplate* struct_template = (PStructTemplate*)object;
+      PStructInstance* struct_instance =
+          p_object_struct_instance_new(struct_template);
+      // loop over the hash table in the template and create an array of values
+      char** fields = malloc(sizeof(char*) * struct_template->fields.count);
+      for (int i = 0; i < struct_template->fields.capacity; i++) {
+        if (struct_template->fields.entries[i].key == NULL ||
+            struct_template->fields.entries[i].value == NULL ||
+            struct_template->fields.entries[i].value->type != VAL_NUMBER)
+          continue;
+        int index =
+            (int)(struct_template->fields.entries[i].value->data.number);
+        char* field = malloc(sizeof(char) * strlen(struct_template->fields.entries[i].key));
+        strcpy(field, struct_template->fields.entries[i].key);
+        fields[index] = field;
+      }
+      // loop over the arguments and assign them to the struct instance
+      for (size_t i = 0; i < struct_template->fields.count; i++) {
+        Value value = pop_stack();
+        hash_table_set(&struct_instance->fields, fields[i], &value);
+      }
+      pop_stack();  // pop the struct template
+      push_stack(value_new_object((PObject*)struct_instance));
+      free(fields);
       break;
     }
     default: {
