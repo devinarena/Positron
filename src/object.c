@@ -147,7 +147,7 @@ void p_object_print(PObject* object) {
       printf("<struct template %s>", ((PStructTemplate*)object)->name->value);
       break;
     case P_OBJ_STRUCT_INSTANCE:
-      printf("<struct instance %s>", ((PStructInstance*)object)->template->name->value);
+      printf("<struct %s instance>", ((PStructInstance*)object)->template->name->value);
       break;
     default:
       printf("<object %p>", object);

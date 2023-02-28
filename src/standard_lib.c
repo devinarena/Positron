@@ -15,7 +15,7 @@
 
 Value p_abs(size_t argc, Value* args) {
   if (argc != 1) {
-    printf("abs() takes exactly 1 arguments (%lld given)", argc);
+    printf("abs() takes exactly 1 arguments (%ld given)", argc);
     exit(1);
   }
   if (args[0].type != VAL_NUMBER) {

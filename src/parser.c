@@ -14,9 +14,9 @@
 #include "lexer.h"
 #include "parser.h"
 #include "positron.h"
+#include "standard_lib.h"
 #include "token.h"
 #include "value.h"
-#include "standard_lib.h"
 
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
@@ -443,7 +443,14 @@ static void call(bool canAssign) {
  * @brief Descent for dot operator. Handles accessing fields of a struct or
  * class.
  */
-static void dot(bool canAssign) {}
+static void dot(bool canAssign) {
+  consume(TOKEN_IDENTIFIER);
+  PString* name =
+      p_object_string_new_n(parser.previous.start, parser.previous.length);
+  block_new_opcodes_3(parser.function->block, OP_CONSTANT,
+                      block_new_constant(parser.function->block, &value_new_object(name)),
+                      OP_FIELD_GET);
+}
 
 /**
  * @brief Expression level parsing, handles operators and expressions based on
@@ -777,7 +784,8 @@ static void statement_struct_template() {
   if (parser.scope) {
     block_new_opcodes(parser.function->block, OP_LOCAL_SET, new_local(&name));
   } else {
-    hash_table_set(&parser.globals, name_string->value, &value_new_object(template));
+    hash_table_set(&parser.globals, name_string->value,
+                   &value_new_object(template));
     block_new_opcodes(parser.function->block, OP_CONSTANT,
                       block_new_constant(parser.function->block,
                                          &value_new_object(name_string)));

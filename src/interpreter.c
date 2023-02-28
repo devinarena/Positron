@@ -123,12 +123,13 @@ static void call_object(CallFrame** frame, Value obj, size_t arg_count) {
           continue;
         int index =
             (int)(struct_template->fields.entries[i].value->data.number);
-        char* field = malloc(sizeof(char) * strlen(struct_template->fields.entries[i].key));
+        char* field = malloc(sizeof(char) *
+                             strlen(struct_template->fields.entries[i].key));
         strcpy(field, struct_template->fields.entries[i].key);
         fields[index] = field;
       }
       // loop over the arguments and assign them to the struct instance
-      for (size_t i = 0; i < struct_template->fields.count; i++) {
+      for (int i = struct_template->fields.count - 1; i >= 0; i--) {
         Value value = pop_stack();
         hash_table_set(&struct_instance->fields, fields[i], &value);
       }
@@ -261,6 +262,27 @@ static int binary(enum TokenType op) {
       exit(1);
     }
   }
+  return 1;
+}
+
+static int field_get() {
+  Value field = pop_stack();
+  Value object = pop_stack();
+  if (object.type != VAL_OBJ || object.data.reference->type != P_OBJ_STRUCT_INSTANCE) {
+    printf("Expected object type.");
+    exit(1);
+  }
+  if (field.type != VAL_OBJ || field.data.reference->type != P_OBJ_STRING) {
+    printf("Expected string type.");
+    exit(1);
+  }
+  char* ftext = TO_STRING(field)->value;
+  Value* value = hash_table_get(&TO_STRUCT_INSTANCE(object)->fields, ftext);
+  if (value == NULL) {
+    printf("Undefined field '%s'.", ftext);
+    exit(1);
+  }
+  push_stack(*value);
   return 1;
 }
 
@@ -446,6 +468,10 @@ InterpretResult interpret(PFunction* function) {
         if (interpreter.sp > (frame->slots - interpreter.stack) + index + 1)
           pop_stack();
         frame->ip++;
+        break;
+      }
+      case OP_FIELD_GET: {
+        frame->ip += field_get();
         break;
       }
       case OP_CJUMPF: {

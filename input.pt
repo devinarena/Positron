@@ -3,6 +3,9 @@
 struct Input {
   a,
   b,
+  c,
 }
 
 var in = Input(0, -1)
+
+print in.b

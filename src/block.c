@@ -211,15 +211,13 @@ size_t block_print_opcode(Block* block, size_t index) {
       printf("OP_LOCAL_SET [%d]", slot);
       return 2;
     }
-    case OP_STRUCT_GET: {
-      uint8_t slot = *(uint8_t*)block->opcodes->data[index + 1];
-      printf("OP_STRUCT_GET [%d]", slot);
-      return 2;
+    case OP_FIELD_GET: {
+      printf("OP_FIELD_GET");
+      return 1;
     }
-    case OP_STRUCT_SET: {
-      uint8_t slot = *(uint8_t*)block->opcodes->data[index + 1];
-      printf("OP_STRUCT_SET [%d]", slot);
-      return 2;
+    case OP_FIELD_SET: {
+      printf("OP_FIELD_SET");
+      return 1;
     }
     case OP_CJUMPF: {
       uint16_t addr = *(uint8_t*)block->opcodes->data[index + 1] << 8 |
