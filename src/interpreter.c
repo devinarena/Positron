@@ -95,6 +95,16 @@ static void call_object(CallFrame** frame, Value obj, size_t arg_count) {
       (*frame)->slotCount = arg_count;
       break;
     }
+    case P_OBJ_BUILTIN: {
+      (*frame)->ip += 2;
+      PBuiltin* builtin = (PBuiltin*)object;
+      Value result = builtin->function(arg_count, &interpreter.stack[interpreter.sp - arg_count]);
+      for (size_t i = 0; i < arg_count; i++) {
+        pop_stack();
+      }
+      push_stack(result);
+      break;
+    }
     default: {
       printf("Expected callable object type.");
       exit(1);

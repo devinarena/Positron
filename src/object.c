@@ -123,14 +123,11 @@ void p_object_free(PObject* object) {
     }
     case P_OBJ_FUNCTION: {
       PFunction* function = (PFunction*)object;
-      p_object_free((PObject*)function->name);
       block_free(function->block);
       break;
     }
     case P_OBJ_BUILTIN: {
       PBuiltin* builtin = (PBuiltin*)object;
-      p_object_free((PObject*)builtin->name);
-      p_object_free((PObject*)builtin->name);
       break;
     }
     default:

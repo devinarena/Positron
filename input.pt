@@ -1,11 +1,5 @@
 
 
-fun test(a, b) {
-    for (var c = 0; c < a; c = c + 1) {
-        print b
-    }
-}
+var x = (3 - 5) * 2 * 9
 
-var c = test
-
-c(10, "Hello world")
+print(abs(x))

@@ -109,6 +109,7 @@ void parser_init() {
   parser.scope = 0;
   parser.local_count = 0;
   hash_table_init(&parser.globals);
+  init_standard_lib(&parser.globals);
 
   advance();
 }
