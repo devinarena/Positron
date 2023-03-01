@@ -163,8 +163,8 @@ void token_type_print(enum TokenType type) {
     case TOKEN_FUN: 
       printf("TOKEN_FUN");
       break;
-    case TOKEN_VAR:
-      printf("TOKEN_VAR");
+    case TOKEN_LET:
+      printf("TOKEN_LET");
       break;
     case TOKEN_NOT_EQUAL:
       printf("TOKEN_NOT_EQUAL");

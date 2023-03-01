@@ -134,7 +134,7 @@ static void synchronize() {
 
     switch (parser.current.type) {
       case TOKEN_PRINT:
-      case TOKEN_VAR:
+      case TOKEN_LET:
       case TOKEN_BOOL:
       case TOKEN_IF:
       case TOKEN_WHILE:
@@ -447,9 +447,20 @@ static void dot(bool canAssign) {
   consume(TOKEN_IDENTIFIER);
   PString* name =
       p_object_string_new_n(parser.previous.start, parser.previous.length);
-  block_new_opcodes_3(parser.function->block, OP_CONSTANT,
-                      block_new_constant(parser.function->block, &value_new_object(name)),
-                      OP_FIELD_GET);
+
+  if (match(TOKEN_EQUAL)) {
+    expression(PREC_ASSIGNMENT);
+    block_new_opcodes_3(
+        parser.function->block, OP_CONSTANT,
+        block_new_constant(parser.function->block, &value_new_object(name)),
+        OP_FIELD_SET);
+    return;
+  }
+
+  block_new_opcodes_3(
+      parser.function->block, OP_CONSTANT,
+      block_new_constant(parser.function->block, &value_new_object(name)),
+      OP_FIELD_GET);
 }
 
 /**
@@ -666,7 +677,7 @@ static void statement_for() {
   // initializer
   if (match(TOKEN_SEMICOLON)) {
     // no initializer
-  } else if (match(TOKEN_VAR)) {
+  } else if (match(TOKEN_LET)) {
     statement_declaration();
     if (parser.previous.type != TOKEN_SEMICOLON)
       consume(TOKEN_SEMICOLON);
@@ -802,7 +813,7 @@ void statement() {
     block_new_opcode(parser.function->block, OP_PRINT);
   } else if (match(TOKEN_IF)) {
     statement_if();
-  } else if (match(TOKEN_VAR)) {
+  } else if (match(TOKEN_LET)) {
     statement_declaration();
   } else if (match(TOKEN_FUN)) {
     statement_function();
@@ -883,6 +894,9 @@ PFunction* parse_function(PFunction* target) {
     parse_error("Expected '}' at end of function");
   }
 
+  parser.scope--;
+  pop_locals();
+
   block_new_opcode(parser.function->block, OP_RETURN);
 
   if (parser.had_error) {
@@ -899,7 +913,6 @@ PFunction* parse_function(PFunction* target) {
   }
 #endif
 
-  parser.scope--;
   return target;
 }
 ParseRule rules[] = {
@@ -921,7 +934,7 @@ ParseRule rules[] = {
     [TOKEN_PRINT] = {NULL, NULL, PREC_NONE},
     [TOKEN_RETURN] = {NULL, NULL, PREC_NONE},
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
-    [TOKEN_VAR] = {NULL, NULL, PREC_NONE},
+    [TOKEN_LET] = {NULL, NULL, PREC_NONE},
     [TOKEN_WHILE] = {NULL, NULL, PREC_NONE},
 
     [TOKEN_IDENTIFIER] = {variable, NULL, PREC_NONE},

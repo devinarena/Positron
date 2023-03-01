@@ -1,11 +1,11 @@
 
-for (var a = 0; a < 10; a = a + 1) {
+for (let a = 0; a < 10; a = a + 1) {
     print a
 }
 
 print ""
 
-var b = 0
+let b = 0
 
 // test without init
 for (; b < 5; b = b + 1) {
@@ -15,7 +15,7 @@ for (; b < 5; b = b + 1) {
 print ""
 
 // test without post expression
-for (var c = 0; c < 5; ) {
+for (let c = 0; c < 5; ) {
     print c
     c = c + 1
 }
@@ -23,7 +23,7 @@ for (var c = 0; c < 5; ) {
 print ""
 
 // test without condition
-for (var c = 0; ; c = c + 1) {
+for (let c = 0; ; c = c + 1) {
     print c
 
     if (c == 9) {

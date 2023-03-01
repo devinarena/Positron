@@ -122,6 +122,8 @@ static Token identifier() {
     return make_token(TOKEN_FUN, schar, length);
   } else if (length == 2 && strncmp(schar, "if", length) == 0) {
     return make_token(TOKEN_IF, schar, length);
+  } else if (length == 3 && strncmp(schar, "let", length) == 0) {
+    return make_token(TOKEN_LET, schar, length);
   } else if (length == 4 && strncmp(schar, "null", length) == 0) {
     return make_token(TOKEN_NULL, schar, length);
   } else if (length == 3 && strncmp(schar, "ret", length) == 0) {
@@ -132,8 +134,6 @@ static Token identifier() {
     return make_token(TOKEN_STRUCT, schar, length);
   } else if (length == 4 && strncmp(schar, "true", length) == 0) {
     return make_token(TOKEN_TRUE, schar, length);
-  } else if (length == 3 && strncmp(schar, "var", length) == 0) {
-    return make_token(TOKEN_VAR, schar, length);
   } else if (length == 5 && strncmp(schar, "while", length) == 0) {
     return make_token(TOKEN_WHILE, schar, length);
   }

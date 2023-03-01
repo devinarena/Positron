@@ -1,5 +1,5 @@
 
-var a = 1000
+let a = 1000
 
 while (a >= 1) {
     print a

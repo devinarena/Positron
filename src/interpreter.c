@@ -91,6 +91,11 @@ static void call_object(CallFrame** frame, Value obj, size_t arg_count) {
   PObject* object = (PObject*)obj.data.reference;
   switch (object->type) {
     case P_OBJ_FUNCTION: {
+      if (arg_count != ((PFunction*)object)->arity) {
+        printf("Expected %lld arguments but got %lld.",
+               ((PFunction*)object)->arity, arg_count);
+        exit(1);
+      }
       (*frame)->ip += 2;
       push_frame((CallFrame){.ip = 0, .function = (PFunction*)object});
       (*frame) = &interpreter.frames[interpreter.fp - 1];
@@ -101,6 +106,11 @@ static void call_object(CallFrame** frame, Value obj, size_t arg_count) {
     case P_OBJ_BUILTIN: {
       (*frame)->ip += 2;
       PBuiltin* builtin = (PBuiltin*)object;
+      if (arg_count != builtin->arity) {
+        printf("Expected %lld arguments but got %lld.", builtin->arity,
+               arg_count);
+        exit(1);
+      }
       Value result = builtin->function(
           arg_count, &interpreter.stack[interpreter.sp - arg_count]);
       for (size_t i = 0; i < arg_count; i++) {
@@ -112,6 +122,11 @@ static void call_object(CallFrame** frame, Value obj, size_t arg_count) {
     case P_OBJ_STRUCT_TEMPLATE: {
       (*frame)->ip += 2;
       PStructTemplate* struct_template = (PStructTemplate*)object;
+      if (arg_count != struct_template->fields.count) {
+        printf("Expected %d arguments but got %lld.",
+               struct_template->fields.count, arg_count);
+        exit(1);
+      }
       PStructInstance* struct_instance =
           p_object_struct_instance_new(struct_template);
       // loop over the hash table in the template and create an array of values
@@ -268,7 +283,8 @@ static int binary(enum TokenType op) {
 static int field_get() {
   Value field = pop_stack();
   Value object = pop_stack();
-  if (object.type != VAL_OBJ || object.data.reference->type != P_OBJ_STRUCT_INSTANCE) {
+  if (object.type != VAL_OBJ ||
+      object.data.reference->type != P_OBJ_STRUCT_INSTANCE) {
     printf("Expected object type.");
     exit(1);
   }
@@ -283,6 +299,24 @@ static int field_get() {
     exit(1);
   }
   push_stack(*value);
+  return 1;
+}
+
+static int field_set() {
+  Value field = pop_stack();
+  Value value = pop_stack();
+  Value object = pop_stack();
+  if (object.type != VAL_OBJ ||
+      object.data.reference->type != P_OBJ_STRUCT_INSTANCE) {
+    printf("Expected object type.");
+    exit(1);
+  }
+  if (field.type != VAL_OBJ || field.data.reference->type != P_OBJ_STRING) {
+    printf("Expected string type.");
+    exit(1);
+  }
+  char* ftext = TO_STRING(field)->value;
+  hash_table_set(&TO_STRUCT_INSTANCE(object)->fields, ftext, &value);
   return 1;
 }
 
@@ -338,6 +372,12 @@ InterpretResult interpret(PFunction* function) {
             *(uint8_t*)frame->function->block->opcodes->data[frame->ip + 1];
         Value callable = peek_stack(arg_count);
         if (callable.type != VAL_OBJ) {
+          printf("Expected callable object type.");
+          exit(1);
+        }
+        if (callable.data.reference->type != P_OBJ_FUNCTION &&
+            callable.data.reference->type != P_OBJ_BUILTIN &&
+            callable.data.reference->type != P_OBJ_STRUCT_TEMPLATE) {
           printf("Expected callable object type.");
           exit(1);
         }
@@ -472,6 +512,10 @@ InterpretResult interpret(PFunction* function) {
       }
       case OP_FIELD_GET: {
         frame->ip += field_get();
+        break;
+      }
+      case OP_FIELD_SET: {
+        frame->ip += field_set();
         break;
       }
       case OP_CJUMPF: {

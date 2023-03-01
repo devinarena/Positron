@@ -1,7 +1,7 @@
-var a = 5
+let a = 5
 
-var override = false
-var underride = true
+let override = false
+let underride = true
 
 if (a >= 0 || override) {
     print "true || false"

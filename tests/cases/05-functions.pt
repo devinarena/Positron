@@ -1,11 +1,11 @@
 
 
 fun test(a, b) {
-    for (var c = 0; c < a; c = c + 1) {
+    for (let c = 0; c < a; c = c + 1) {
         print b
     }
 }
 
-var c = test
+let c = test
 
 c(10, "Hello world")

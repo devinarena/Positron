@@ -1,4 +1,4 @@
-var x = (5 - 3) * 2 * 9
-var y = 4
-var z = x + y
+let x = (5 - 3) * 2 * 9
+let y = 4
+let z = x + y
 print z * x
