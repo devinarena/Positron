@@ -68,9 +68,10 @@ PFunction* p_object_function_new(PString* name) {
  * @brief Allocates and returns a new builtin function object.
  * 
  */
-PBuiltin* p_object_builtin_new(PString* name, BuiltinFn function) {
+PBuiltin* p_object_builtin_new(PString* name, BuiltinFn function, size_t arity) {
   PBuiltin* builtin = p_object_new(PBuiltin, P_OBJ_BUILTIN);
   builtin->name = name;
+  builtin->arity = arity;
   builtin->function = *function;
   return builtin;
 }

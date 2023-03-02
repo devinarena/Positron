@@ -6,9 +6,9 @@
  * @since Represents a value in the language, such as a number, string, etc.
  **/
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 
 #include "object.h"
 #include "value.h"
@@ -99,7 +99,11 @@ void value_print(Value* value) {
       printf("%s", value->data.boolean ? "true" : "false");
       break;
     case VAL_NUMBER:
-      printf("%f", value->data.number);
+      // print as an integer if it's an integer
+      if (value->data.number == (int)value->data.number)
+        printf("%d", (int)value->data.number);
+      else
+        printf("%f", value->data.number);
       break;
     case VAL_OBJ:
       p_object_print(value->data.reference);
@@ -128,7 +132,7 @@ void value_print_type(Value* value) {
 
 /**
  * @brief Prints the type of a value type (the enum)
- * 
+ *
  * @param type the value type to print
  */
 void value_type_print_type(enum ValueType type) {

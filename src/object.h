@@ -77,7 +77,7 @@ PString* p_object_string_new(const char* data);
 // allocates and returns a new PFunction.
 PFunction* p_object_function_new(PString* name);
 // allocates and returns a new PBuiltin.
-PBuiltin* p_object_builtin_new(PString* name, BuiltinFn function);
+PBuiltin* p_object_builtin_new(PString* name, BuiltinFn function, size_t argc);
 // allocates and returns a new PStructTemplate.
 PStructTemplate* p_object_struct_template_new(PString* name);
 // allocates and returns a new PStructInstance.

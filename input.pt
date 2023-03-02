@@ -8,8 +8,6 @@ struct Input {
 
 let in = Input(0, -1, "hello")
 
-in.a = 3
+in.a = -3
 
-print in.a
-print in.b
-print in.c
+print abs(in.a)
