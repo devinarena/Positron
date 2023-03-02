@@ -176,6 +176,12 @@ static int negate() {
   return 1;
 }
 
+/**
+ * @brief Executes a binary operation on the top two values on the stack.
+ * 
+ * @param op the operation to execute
+ * @return int the number of bytes to advance the instruction pointer
+ */
 static int binary(enum TokenType op) {
   Value b = pop_stack();
   Value a = pop_stack();
@@ -280,6 +286,11 @@ static int binary(enum TokenType op) {
   return 1;
 }
 
+/**
+ * @brief Gets a field of a struct instance and pushes it to the stack.
+ * 
+ * @return int 1 the number of bytes to move the instruction pointer by
+ */
 static int field_get() {
   Value field = pop_stack();
   Value object = pop_stack();
@@ -302,6 +313,11 @@ static int field_get() {
   return 1;
 }
 
+/**
+ * @brief Sets a field of a struct instance to a value.
+ * 
+ * @return int 1 the number of bytes to move the instruction pointer by
+ */
 static int field_set() {
   Value field = pop_stack();
   Value value = pop_stack();

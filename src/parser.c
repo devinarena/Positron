@@ -549,13 +549,16 @@ static void statement_function() {
   PFunction* function = p_object_function_new(fname);
 
   parser.scope++;
+  size_t args = 0;
   while (!match(TOKEN_RPAREN)) {
     if (match(TOKEN_IDENTIFIER)) {
       new_local(&parser.previous);
+      args += 1;
     }
     if (!check(TOKEN_RPAREN))
       consume(TOKEN_COMMA);
   }
+  function->arity = args;
   parser.scope--;
 
   Value fval = value_new_object((PObject*)function);
@@ -894,10 +897,10 @@ PFunction* parse_function(PFunction* target) {
     parse_error("Expected '}' at end of function");
   }
 
+  block_new_opcode(parser.function->block, OP_RETURN);
+
   parser.scope--;
   pop_locals();
-
-  block_new_opcode(parser.function->block, OP_RETURN);
 
   if (parser.had_error) {
     return NULL;

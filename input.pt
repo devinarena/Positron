@@ -6,7 +6,7 @@ struct Input {
   c,
 }
 
-let in = Input(0, -1, "Hello")
+let in = Input(0, -1, "hello")
 
 in.a = 3
 
