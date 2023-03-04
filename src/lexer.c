@@ -243,8 +243,23 @@ Token lexer_next_token() {
       token = make_token(TOKEN_RBRACE, schar, 1);
       lexer.index++;
       break;
+    case '[': {
+      token = make_token(TOKEN_LBRACKET, schar, 1);
+      lexer.index++;
+      break;
+    }
+    case ']': {
+      token = make_token(TOKEN_RBRACKET, schar, 1);
+      lexer.index++;
+      break;
+    }
     case ';': {
       token = make_token(TOKEN_SEMICOLON, schar, 1);
+      lexer.index++;
+      break;
+    }
+    case ':': {
+      token = make_token(TOKEN_COLON, schar, 1);
       lexer.index++;
       break;
     }

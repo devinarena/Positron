@@ -27,6 +27,7 @@ void interpreter_init() {
   interpreter.sp = 0;
   interpreter.heap = NULL;
   hash_table_init(&interpreter.globals);
+  hash_table_init(&interpreter.strings);
   init_standard_lib(&interpreter.globals);
 }
 
@@ -122,7 +123,7 @@ static void call_object(CallFrame** frame, Value obj, size_t arg_count) {
     case P_OBJ_STRUCT_TEMPLATE: {
       (*frame)->ip += 2;
       PStructTemplate* struct_template = (PStructTemplate*)object;
-      if (arg_count != struct_template->fields.count) {
+      if ((int)arg_count != struct_template->fields.count) {
         printf("Expected %d arguments but got %lld.",
                struct_template->fields.count, arg_count);
         exit(1);
@@ -337,6 +338,58 @@ static int field_set() {
 }
 
 /**
+ * @brief Creates a new list and pushes it to the stack.
+ * 
+ * @return int 1 the number of bytes to move the instruction pointer by
+ */
+static int list() {
+  Value count = pop_stack();
+  PList* list = p_object_list_new();
+  while (list->capacity < count.data.number) {
+    list->capacity = list->capacity * LIST_GROW_FACTOR;
+  }
+  list->values = malloc(list->capacity * sizeof(Value));
+  for (int i = count.data.number - 1; i >= 0; i--) {
+    Value value = pop_stack();
+    list->values[i] = value;
+  }
+  list->count = count.data.number;
+  push_stack(value_new_object((PObject*)list));
+  return 1;
+}
+
+/**
+ * @brief Gets an element of a list and pushes it to the stack.
+ * 
+ * @return int 1 the number of bytes to move the instruction pointer by
+ */
+static int list_index() {
+  Value index = pop_stack();
+  Value list = pop_stack();
+  if (list.type != VAL_OBJ || list.data.reference->type != P_OBJ_LIST) {
+    printf("Cannot access elements of ");
+    value_print(&list);
+    printf(".");
+    exit(1);
+  }
+  if (index.type != VAL_NUMBER) {
+    printf("Cannot access element with index ");
+    value_print(&index);
+    printf(".");
+    exit(1);
+  }
+
+  if (index.data.number < 0 || index.data.number >= TO_LIST(list)->count) {
+    printf("Index out of bounds.");
+    exit(1);
+  }
+
+  push_stack(TO_LIST(list)->values[(int)index.data.number]);
+
+  return 1;
+}
+
+/**
  * @brief Interprets the emitted opcodes of a frame->function.
  *
  * @param frame->function the frame->function to interpret
@@ -534,6 +587,14 @@ InterpretResult interpret(PFunction* function) {
         frame->ip += field_set();
         break;
       }
+      case OP_LIST: {
+        frame->ip += list();
+        break;
+      }
+      case OP_INDEX : {
+        frame->ip += list_index();
+        break;
+      }
       case OP_CJUMPF: {
         Value condition = pop_stack();
         uint8_t high =
@@ -635,6 +696,7 @@ void interpreter_print() {
  */
 void interpreter_free() {
   hash_table_free(&interpreter.globals);
+  hash_table_free(&interpreter.strings);
 
   // Free the heap
   PObject* object = interpreter.heap;

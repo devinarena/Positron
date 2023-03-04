@@ -47,10 +47,15 @@ enum TokenType {
   TOKEN_RPAREN,
   TOKEN_LBRACE,
   TOKEN_RBRACE,
+  TOKEN_LBRACKET,
+  TOKEN_RBRACKET,
   TOKEN_GREATER,
   TOKEN_LESS,
   TOKEN_COMMA,
   TOKEN_DOT,
+  TOKEN_COLON,
+  // Thinking semi-colons will be optional for now
+  TOKEN_SEMICOLON,
 
   // double character tokens
   TOKEN_EQUAL_EQUAL,
@@ -60,8 +65,6 @@ enum TokenType {
   TOKEN_AND,
   TOKEN_OR,
 
-  // Thinking semi-colons will be optional for now
-  TOKEN_SEMICOLON,
   TOKEN_EOF
 };
 

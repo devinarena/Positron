@@ -464,6 +464,33 @@ static void dot(bool canAssign) {
 }
 
 /**
+ * @brief Descent for list literals. Create a list with [] and add the
+ * expressions inside.
+ * 
+ * @param canAssign
+ */
+static void list(bool canAssign) {
+  size_t count = 0;
+  while (!check(TOKEN_RBRACKET)) {
+    if (count > 0) {
+      consume(TOKEN_COMMA);
+    }
+    expression(PREC_ASSIGNMENT);
+    count++;
+  }
+  consume(TOKEN_RBRACKET);
+  block_new_opcodes(
+      parser.function->block, OP_CONSTANT,
+      block_new_constant(parser.function->block, &value_new_number(count)));
+  block_new_opcode(parser.function->block, OP_LIST);
+}
+
+static void list_index(bool canAssign) {
+  expression(PREC_ASSIGNMENT);
+  block_new_opcode(parser.function->block, OP_INDEX);
+}
+
+/**
  * @brief Expression level parsing, handles operators and expressions based on
  * precedence.
  *
@@ -952,10 +979,13 @@ ParseRule rules[] = {
     [TOKEN_RPAREN] = {NULL, NULL, PREC_NONE},
     [TOKEN_LBRACE] = {NULL, NULL, PREC_NONE},
     [TOKEN_RBRACE] = {NULL, NULL, PREC_NONE},
+    [TOKEN_LBRACKET] = {list, NULL, PREC_NONE},
+    [TOKEN_RBRACKET] = {NULL, NULL, PREC_NONE},
     [TOKEN_GREATER] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_LESS] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_COMMA] = {NULL, NULL, PREC_NONE},
     [TOKEN_DOT] = {NULL, dot, PREC_CALL},
+    [TOKEN_COLON] = {NULL, list_index, PREC_PRIMARY},
 
     [TOKEN_EQUAL_EQUAL] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_NOT_EQUAL] = {NULL, binary, PREC_COMPARISON},

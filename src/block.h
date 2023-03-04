@@ -44,6 +44,9 @@ enum OpCode {
     OP_GTE,
     OP_EQ,
     OP_NEQ,
+    
+    OP_LIST,
+    OP_INDEX,
 
     // Two bytes
     OP_CONSTANT,

@@ -165,7 +165,7 @@ size_t block_print_opcode(Block* block, size_t index) {
     case OP_NEGATE:
       printf("OP_NEGATE");
       return 1;
-    case OP_ADD: 
+    case OP_ADD:
       printf("OP_ADD");
       return 1;
     case OP_SUB:
@@ -194,6 +194,9 @@ size_t block_print_opcode(Block* block, size_t index) {
       return 1;
     case OP_NEQ:
       printf("OP_NEQ");
+      return 1;
+    case OP_LIST:
+      printf("OP_LIST");
       return 1;
     case OP_CONSTANT:
       printf("OP_CONSTANT [%d]", *(uint8_t*)block->opcodes->data[index + 1]);

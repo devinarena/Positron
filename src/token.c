@@ -139,6 +139,12 @@ void token_type_print(enum TokenType type) {
     case TOKEN_RBRACE:
       printf("TOKEN_RBRACE");
       break;
+    case TOKEN_LBRACKET:
+      printf("TOKEN_LBRACKET");
+      break;
+    case TOKEN_RBRACKET:
+      printf("TOKEN_RBRACKET");
+      break;
     case TOKEN_GREATER:
       printf("TOKEN_GREATER");
       break;
@@ -153,6 +159,9 @@ void token_type_print(enum TokenType type) {
       break;
     case TOKEN_SEMICOLON:
       printf("TOKEN_SEMICOLON");
+      break;
+    case TOKEN_COLON:
+      printf("TOKEN_COLON");
       break;
     case TOKEN_EOF:
       printf("TOKEN_EOF");

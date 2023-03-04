@@ -15,6 +15,9 @@
 #define TO_FUNCTION(val) ((PFunction*)(val).data.reference)
 #define TO_STRUCT(val) ((PStruct*)(val).data.reference)
 #define TO_STRUCT_INSTANCE(val) ((PStructInstance*)(val).data.reference)
+#define TO_LIST(val) ((PList*)(val).data.reference)
+
+#define LIST_GROW_FACTOR 2
 
 #include <stdint.h>
 
@@ -30,6 +33,7 @@ typedef enum PObjectType {
   P_OBJ_BUILTIN,
   P_OBJ_STRUCT_TEMPLATE,
   P_OBJ_STRUCT_INSTANCE,
+  P_OBJ_LIST
 } PObjectType;
 
 struct PObject {
@@ -71,6 +75,13 @@ typedef struct PStructInstance {
   HashTable fields;
 } PStructInstance;
 
+typedef struct PList {
+  PObject base;
+  size_t count;
+  size_t capacity;
+  Value* values;
+} PList;
+
 // allocates and returns a new PString.
 PString* p_object_string_new_n(const char* data, size_t length);
 PString* p_object_string_new(const char* data);
@@ -82,6 +93,8 @@ PBuiltin* p_object_builtin_new(PString* name, BuiltinFn function, size_t argc);
 PStructTemplate* p_object_struct_template_new(PString* name);
 // allocates and returns a new PStructInstance.
 PStructInstance* p_object_struct_instance_new(PStructTemplate* template);
+// allocates and returns a new PList.
+PList* p_object_list_new();
 // prints the type of the given PObject.
 void p_object_type_print(PObject* object);
 // prints the given PObject.

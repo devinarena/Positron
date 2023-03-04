@@ -33,6 +33,7 @@ typedef struct Interpreter {
     int sp;
     Value stack[STACK_SIZE];
     HashTable globals;
+    HashTable strings;
     CallFrame frames[MAX_FRAMES];
     PObject* heap;
 } Interpreter;
