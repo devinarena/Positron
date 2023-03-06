@@ -39,7 +39,7 @@ print "Hello, world"
 Print a string 10 times:
 ```
 vd print_n(text, count) {
-  for (var i = 0; i < count; i = i + 1) {
+  for (let i = 0; i < count; i = i + 1) {
     print text
   }
 }
@@ -51,10 +51,10 @@ print_n("Hello, world!", 10);
 ### Please note: most if not all of these features are not yet implemented.
 The end-goal of Positron (other than the learning experience) is to create a tool for solving DSA problems in a fun way. For example:
 ```
-bool contains_duplicate(i32[] nums) {
-    var seen = set {}
+fun contains_duplicate(nums) {
+    let seen = set()
 
-    for (var num : nums) {
+    for (let num : nums) {
         if (seen.has(num)) {
             ret true
         }
