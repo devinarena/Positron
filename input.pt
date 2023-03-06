@@ -2,8 +2,8 @@
 
 let list = [3, "hello", 5.5, null]
 
-print list
-print list:0
-print list:1
-print list:2
-print list:3
+wln(list.size())!
+
+for (let i = 0; i < list.size(); i = i + 1) {
+    wln(list:i)!
+}

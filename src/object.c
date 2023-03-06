@@ -11,6 +11,7 @@
 
 #include "interpreter.h"
 #include "object.h"
+#include "standard_lib.h"
 
 static PObject* _p_object_new(PObjectType type, size_t size) {
   PObject* object = malloc(size);
@@ -71,10 +72,12 @@ PFunction* p_object_function_new(PString* name) {
  * @brief Allocates and returns a new builtin function object.
  *
  */
-PBuiltin* p_object_builtin_new(PString* name,
+PBuiltin* p_object_builtin_new(PObject* parent,
+                               PString* name,
                                BuiltinFn function,
                                size_t arity) {
   PBuiltin* builtin = p_object_new(PBuiltin, P_OBJ_BUILTIN);
+  builtin->parent = parent;
   builtin->name = name;
   builtin->arity = arity;
   builtin->function = *function;
@@ -119,6 +122,11 @@ PList* p_object_list_new() {
   list->count = 0;
   list->capacity = 8;
   list->values = malloc(sizeof(Value) * list->capacity);
+  hash_table_init(&list->methods);
+  // TODO: add methods to list
+  hash_table_set(&list->methods, "size",
+                 &value_new_object(p_object_builtin_new(
+                     (PObject*)list, p_object_string_new("size"), &p_list_size, 0)));
   return list;
 }
 
@@ -218,6 +226,12 @@ void p_object_free(PObject* object) {
     case P_OBJ_STRUCT_INSTANCE: {
       PStructInstance* struct_ = (PStructInstance*)object;
       hash_table_free(&struct_->fields);
+      break;
+    }
+    case P_OBJ_LIST: {
+      PList* list = (PList*)object;
+      free(list->values);
+      hash_table_free(&list->methods);
       break;
     }
     default:

@@ -466,7 +466,7 @@ static void dot(bool canAssign) {
 /**
  * @brief Descent for list literals. Create a list with [] and add the
  * expressions inside.
- * 
+ *
  * @param canAssign
  */
 static void list(bool canAssign) {
@@ -488,6 +488,16 @@ static void list(bool canAssign) {
 static void list_index(bool canAssign) {
   expression(PREC_ASSIGNMENT);
   block_new_opcode(parser.function->block, OP_INDEX);
+}
+
+/**
+ * @brief Drops a value from the stack. Used for expressions that don't need to
+ * be stored.
+ *
+ * @param canAssign whether or not the expression can be assigned to
+ */
+static void drop_ref(bool canAssign) {
+  block_new_opcode(parser.function->block, OP_POP);
 }
 
 /**
@@ -789,6 +799,7 @@ static void statement_for() {
         size & 0xFF;
   }
 
+  pop_locals();
   parser.scope--;
   pop_locals();
 }
@@ -969,7 +980,7 @@ ParseRule rules[] = {
 
     [TOKEN_IDENTIFIER] = {variable, NULL, PREC_NONE},
 
-    [TOKEN_EXCLAMATION] = {unary, NULL, PREC_UNARY},
+    [TOKEN_EXCLAMATION] = {unary, drop_ref, PREC_UNARY},
     [TOKEN_PLUS] = {NULL, binary, PREC_TERM},
     [TOKEN_MINUS] = {unary, binary, PREC_TERM},
     [TOKEN_STAR] = {NULL, binary, PREC_FACTOR},

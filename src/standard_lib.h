@@ -14,4 +14,6 @@
 
 void init_standard_lib(HashTable* table);
 
+Value p_list_size(PObject* parent, size_t argc, Value* args);
+
 #endif

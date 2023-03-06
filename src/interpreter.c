@@ -18,6 +18,7 @@
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
 Interpreter interpreter;
+CallFrame* frame;
 
 /**
  * @brief Initializes the interpreter.
@@ -88,7 +89,7 @@ static void pop_frame() {
   interpreter.fp--;
 }
 
-static void call_object(CallFrame** frame, Value obj, size_t arg_count) {
+static void call_object(Value obj, size_t arg_count) {
   PObject* object = (PObject*)obj.data.reference;
   switch (object->type) {
     case P_OBJ_FUNCTION: {
@@ -97,31 +98,33 @@ static void call_object(CallFrame** frame, Value obj, size_t arg_count) {
                ((PFunction*)object)->arity, arg_count);
         exit(1);
       }
-      (*frame)->ip += 2;
+      frame->ip += 2;
       push_frame((CallFrame){.ip = 0, .function = (PFunction*)object});
-      (*frame) = &interpreter.frames[interpreter.fp - 1];
-      (*frame)->slots = &interpreter.stack[interpreter.sp - arg_count];
-      (*frame)->slotCount = arg_count;
+      frame = &interpreter.frames[interpreter.fp - 1];
+      frame->slots = &interpreter.stack[interpreter.sp - arg_count];
+      frame->slotCount = arg_count;
       break;
     }
     case P_OBJ_BUILTIN: {
-      (*frame)->ip += 2;
+      frame->ip += 2;
       PBuiltin* builtin = (PBuiltin*)object;
       if (arg_count != builtin->arity) {
         printf("Expected %lld arguments but got %lld.", builtin->arity,
                arg_count);
         exit(1);
       }
-      Value result = builtin->function(
-          arg_count, &interpreter.stack[interpreter.sp - arg_count]);
+      Value result =
+          builtin->function(builtin->parent, arg_count,
+                            &interpreter.stack[interpreter.sp - arg_count]);
       for (size_t i = 0; i < arg_count; i++) {
         pop_stack();
       }
+      pop_stack();
       push_stack(result);
       break;
     }
     case P_OBJ_STRUCT_TEMPLATE: {
-      (*frame)->ip += 2;
+      frame->ip += 2;
       PStructTemplate* struct_template = (PStructTemplate*)object;
       if ((int)arg_count != struct_template->fields.count) {
         printf("Expected %d arguments but got %lld.",
@@ -179,7 +182,7 @@ static int negate() {
 
 /**
  * @brief Executes a binary operation on the top two values on the stack.
- * 
+ *
  * @param op the operation to execute
  * @return int the number of bytes to advance the instruction pointer
  */
@@ -289,34 +292,52 @@ static int binary(enum TokenType op) {
 
 /**
  * @brief Gets a field of a struct instance and pushes it to the stack.
- * 
+ *
  * @return int 1 the number of bytes to move the instruction pointer by
  */
 static int field_get() {
   Value field = pop_stack();
   Value object = pop_stack();
-  if (object.type != VAL_OBJ ||
-      object.data.reference->type != P_OBJ_STRUCT_INSTANCE) {
+  if (object.type != VAL_OBJ) {
     printf("Expected object type.");
     exit(1);
   }
-  if (field.type != VAL_OBJ || field.data.reference->type != P_OBJ_STRING) {
+  if (!IS_TYPE(field, P_OBJ_STRING)) {
     printf("Expected string type.");
     exit(1);
   }
   char* ftext = TO_STRING(field)->value;
-  Value* value = hash_table_get(&TO_STRUCT_INSTANCE(object)->fields, ftext);
-  if (value == NULL) {
-    printf("Undefined field '%s'.", ftext);
-    exit(1);
+  switch (object.data.reference->type) {
+    case P_OBJ_STRUCT_INSTANCE: {
+      Value* value = hash_table_get(&TO_STRUCT_INSTANCE(object)->fields, ftext);
+      if (value == NULL) {
+        printf("Undefined field '%s'.", ftext);
+        exit(1);
+      }
+      push_stack(*value);
+      break;
+    }
+    case P_OBJ_LIST: {
+      // TODO: there might be a better way to do this
+      PList* list = TO_LIST(object);
+      Value* method = hash_table_get(&list->methods, ftext);
+      if (method == NULL) {
+        printf("Undefined method '%s'.", ftext);
+        exit(1);
+      }
+      push_stack(*method);
+      break;
+    }
+    default:
+      printf("Expected struct instance type.");
+      exit(1);
   }
-  push_stack(*value);
   return 1;
 }
 
 /**
  * @brief Sets a field of a struct instance to a value.
- * 
+ *
  * @return int 1 the number of bytes to move the instruction pointer by
  */
 static int field_set() {
@@ -339,7 +360,7 @@ static int field_set() {
 
 /**
  * @brief Creates a new list and pushes it to the stack.
- * 
+ *
  * @return int 1 the number of bytes to move the instruction pointer by
  */
 static int list() {
@@ -360,7 +381,7 @@ static int list() {
 
 /**
  * @brief Gets an element of a list and pushes it to the stack.
- * 
+ *
  * @return int 1 the number of bytes to move the instruction pointer by
  */
 static int list_index() {
@@ -400,7 +421,7 @@ InterpretResult interpret(PFunction* function) {
 
   push_frame(
       (CallFrame){.ip = 0, .function = function, .slotCount = function->arity});
-  CallFrame* frame = &interpreter.frames[interpreter.fp - 1];
+  frame = &interpreter.frames[interpreter.fp - 1];
   frame->slots = interpreter.stack;
 
   while (frame->ip < frame->function->block->opcodes->size) {
@@ -450,7 +471,7 @@ InterpretResult interpret(PFunction* function) {
           printf("Expected callable object type.");
           exit(1);
         }
-        call_object(&frame, callable, arg_count);
+        call_object(callable, arg_count);
         break;
       }
       case OP_RETURN: {
@@ -591,7 +612,7 @@ InterpretResult interpret(PFunction* function) {
         frame->ip += list();
         break;
       }
-      case OP_INDEX : {
+      case OP_INDEX: {
         frame->ip += list_index();
         break;
       }

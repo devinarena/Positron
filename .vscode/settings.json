@@ -1,1 +1,10 @@
-{}
+{
+    "files.associations": {
+        "iterator": "c",
+        "xmemory": "c",
+        "xtree": "c",
+        "chrono": "c",
+        "system_error": "c",
+        "xlocale": "c"
+    }
+}

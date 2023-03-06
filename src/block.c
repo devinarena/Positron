@@ -198,6 +198,9 @@ size_t block_print_opcode(Block* block, size_t index) {
     case OP_LIST:
       printf("OP_LIST");
       return 1;
+    case OP_INDEX:
+      printf("OP_INDEX");
+      return 1;
     case OP_CONSTANT:
       printf("OP_CONSTANT [%d]", *(uint8_t*)block->opcodes->data[index + 1]);
       return 2;
