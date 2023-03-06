@@ -366,15 +366,15 @@ static int field_set() {
 static int list() {
   Value count = pop_stack();
   PList* list = p_object_list_new();
-  while (list->capacity < count.data.number) {
-    list->capacity = list->capacity * LIST_GROW_FACTOR;
-  }
-  list->values = malloc(list->capacity * sizeof(Value));
+  Value* values = malloc(sizeof(Value) * count.data.number);
   for (int i = count.data.number - 1; i >= 0; i--) {
     Value value = pop_stack();
-    list->values[i] = value;
+    values[i] = value;
   }
-  list->count = count.data.number;
+  for (int i = 0; i < count.data.number; i++) {
+    dyn_list_add(list->list, value_clone(values + i));
+  }
+  free(values);
   push_stack(value_new_object((PObject*)list));
   return 1;
 }
@@ -400,12 +400,12 @@ static int list_index() {
     exit(1);
   }
 
-  if (index.data.number < 0 || index.data.number >= TO_LIST(list)->count) {
+  if (index.data.number < 0 || index.data.number >= TO_LIST(list)->list->size) {
     printf("Index out of bounds.");
     exit(1);
   }
 
-  push_stack(TO_LIST(list)->values[(int)index.data.number]);
+  push_stack(*((Value*)TO_LIST(list)->list->data[(int)index.data.number]));
 
   return 1;
 }

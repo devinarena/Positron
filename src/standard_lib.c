@@ -43,9 +43,19 @@ Value p_clock(PObject* parent, size_t argc, Value* _args) {
   return value_new_number((double)clock());
 }
 
+/**
+ * @brief Builtin methods for lists.
+ */
+
 Value p_list_size(PObject* parent, size_t argc, Value* args) {
   assert(argc == 0);
-  return value_new_number(((PList*)parent)->count);
+  return value_new_number(((PList*)parent)->list->size);
+}
+
+Value p_list_add(PObject* parent, size_t argc, Value* args) {
+  assert(argc == 1);
+  dyn_list_add(((PList*)parent)->list, value_clone(args + 0));
+  return value_new_null();
 }
 
 #define ADD_STD_LIB(name, argc)               \

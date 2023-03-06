@@ -78,10 +78,8 @@ typedef struct PStructInstance {
 
 typedef struct PList {
   PObject base;
-  size_t count;
-  size_t capacity;
-  Value* values;
   HashTable methods;
+  dyn_list* list;
 } PList;
 
 // allocates and returns a new PString.

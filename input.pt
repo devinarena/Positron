@@ -2,8 +2,8 @@
 
 let list = [3, "hello", 5.5, null]
 
-wln(list.size())!
+wln(list)!
 
-for (let i = 0; i < list.size(); i = i + 1) {
-    wln(list:i)!
-}
+list.add(3)
+
+wln(list)!

@@ -119,14 +119,15 @@ PStructInstance* p_object_struct_instance_new(PStructTemplate* template) {
  */
 PList* p_object_list_new() {
   PList* list = p_object_new(PList, P_OBJ_LIST);
-  list->count = 0;
-  list->capacity = 8;
-  list->values = malloc(sizeof(Value) * list->capacity);
+  list->list = dyn_list_new((void*)&value_free);
   hash_table_init(&list->methods);
   // TODO: add methods to list
   hash_table_set(&list->methods, "size",
                  &value_new_object(p_object_builtin_new(
                      (PObject*)list, p_object_string_new("size"), &p_list_size, 0)));
+  hash_table_set(&list->methods, "add",
+                 &value_new_object(p_object_builtin_new(
+                     (PObject*)list, p_object_string_new("add"), &p_list_add, 1)));
   return list;
 }
 
@@ -185,9 +186,9 @@ void p_object_print(PObject* object) {
     case P_OBJ_LIST: {
       PList* list = (PList*)object;
       printf("[");
-      for (size_t i = 0; i < list->count; i++) {
-        value_print(list->values + i);
-        if (i != list->count - 1) {
+      for (size_t i = 0; i < list->list->size; i++) {
+        value_print((Value*)list->list->data[i]);
+        if (i != list->list->size - 1) {
           printf(", ");
         }
       }
@@ -230,7 +231,7 @@ void p_object_free(PObject* object) {
     }
     case P_OBJ_LIST: {
       PList* list = (PList*)object;
-      free(list->values);
+      dyn_list_free(list->list);
       hash_table_free(&list->methods);
       break;
     }
