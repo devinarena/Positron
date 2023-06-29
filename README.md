@@ -1,6 +1,6 @@
 # Positron
 
-## !! Unfinished and experimental software, subject to changes and is not suitable for production at this time. !!
+## !! Unfinished and experimental software !!
 
 ## About
 A bytecode VM interpreter written in C. Positron is based on another unfinished language I wrote called Palladium, which was simply too clunky and not elegant to use. I decided to take what I learned and create a new programming language with the goal of making solving programming-style problems easier and more fun. The goal is to create a language that elegantly handles data structures and algorithms with python-levels of wordiness.
